@@ -1,7 +1,5 @@
 # Manufacturing KPI Platform
 
-# Manufacturing KPI Platform
-
 Real-time manufacturing KPI and production monitoring platform built with ASP.NET Core MVC, SQL Server, Entity Framework Core, and SignalR. The system centralizes production tracking, OEE monitoring, quality management, downtime analysis, attendance synchronization, and live operational dashboards.
 
 ## Stack
