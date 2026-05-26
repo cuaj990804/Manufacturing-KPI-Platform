@@ -1,0 +1,256 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model GDIKPI.DTO.Login.LoginDTO
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Index</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" />
+    <style>
+        /* Estilos para el overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Color de fondo semitransparente */
+            z-index: 1; /* Asegura que el overlay esté sobre todos los demás elementos */
+        }
+
+        /* Estilos adicionales para el body y el contenedor de login */
+        body {
+            background: url("/assets/Background-login.jpg");
+            background-size: cover;
+            height: 100vh;
+            background-repeat: no-repeat;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .container {
+            position: relative; /* Asegura que el contenedor esté posicionado relativo para alinear correctamente el formulario */
+            max-width: 440px;
+            padding: 0 20px;
+            margin: 170px auto;
+            z-index: 2; /* Asegura que el contenedor esté sobre el overlay */
+        }
+
+        .wrapper {
+            width: 100%;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0px 4px 10px 1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Resto de tus estilos (sin cambios) */
+        .logo {
+            margin-bottom: 15px;
+            margin-top: 0px;
+            padding-top: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+            .logo img {
+                width: 90%;
+                margin: 10px;
+                border-radius: 50px;
+            }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .wrapper img {
+            width: 90%;
+            margin: 10px;
+            border-radius: 50px;
+        }
+
+        .wrapper form {
+            padding: 30px 25px 25px 25px;
+        }
+
+            .wrapper form .row {
+                height: 45px;
+                margin-bottom: 15px;
+                position: relative;
+            }
+
+                .wrapper form .row input {
+                    height: 100%;
+                    width: 100%;
+                    outline: none;
+                    padding-left: 60px;
+                    border-radius: 5px;
+                    border: 1px solid lightgrey;
+                    font-size: 16px;
+                    transition: all 0.3s ease;
+                }
+
+        form .row input:focus {
+            border-color: #1E406E;
+            box-shadow: inset 0px 0px 2px 2px rgba(26, 110, 188, 0.25);
+        }
+
+        form .row input::placeholder {
+            color: #999;
+        }
+
+        .wrapper form .row i {
+            position: absolute;
+            width: 47px;
+            height: 100%;
+            color: #fff;
+            font-size: 18px;
+            background: #335D99;
+            border: 1px solid #335D99;
+            border-radius: 5px 0 0 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wrapper form button {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 500;
+            padding-left: 0px;
+            background: #335D99;
+            border: 1px solid #335D99;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background: #1E406E;
+        }
+
+        /* Pantalla de carga */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #335D99;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+    </style>
+
+
+</head>
+
+
+<body>
+    <!-- Pantalla de carga -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text">Iniciando sesión...</div>
+        </div>
+    </div>
+
+    <div class="overlay"></div>
+    <div class="container">
+        <div class="wrapper">
+            <img src="/assets/LogoGDI.png" alt="Company Logo" draggable="false" srcset="" />
+            <form asp-action="Login" method="post" id="loginForm">
+                <div class="row">
+                    <i class="fas fa-user"></i>
+                    <input type="password" placeholder="Contraseña" class="form-control" id="usuario-input" asp-for="EmployeeNumber" required>
+
+                </div>
+
+                <div class="row button">
+                    <button type="submit" class="btn btn-primary" id="loginButton">Ingresar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+</body>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Auto focus en el input cuando carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('usuario-input').focus();
+    });
+
+    // Mostrar pantalla de carga al enviar el formulario
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        // No prevenir el envío del formulario (e.preventDefault())
+
+        // Mostrar overlay de carga después de un pequeño delay para asegurar que el formulario se envíe
+        setTimeout(function() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            // Deshabilitar el botón para evitar múltiples envíos
+            document.getElementById('loginButton').disabled = true;
+            document.getElementById('loginButton').innerHTML = 'Procesando...';
+
+            // Deshabilitar el input
+            document.getElementById('usuario-input').disabled = true;
+        }, 10);
+    });
+
+    // Ocultar pantalla de carga si hay error (página se recarga)
+    window.addEventListener('pageshow', function() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('loginButton').disabled = false;
+        document.getElementById('loginButton').innerHTML = 'Ingresar';
+        document.getElementById('usuario-input').disabled = false;
+    });
+</script>
+
+
+</html>
+
+

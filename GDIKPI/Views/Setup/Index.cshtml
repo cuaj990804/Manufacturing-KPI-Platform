@@ -1,0 +1,270 @@
+@{
+    ViewData["Title"] = "Setup Usuario TV";
+}
+
+<div class="container mt-4">
+    <h2><i class="fas fa-tv"></i> Configurar Usuario TV</h2>
+    <p class="text-muted">Herramienta para encontrar el área ZF-Forrado y crear el usuario TV</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-search"></i> Buscar Área ZF-Forrado</h5>
+                </div>
+                <div class="card-body">
+                    <button type="button" class="btn btn-primary" onclick="buscarArea()">
+                        <i class="fas fa-search"></i> Buscar Área
+                    </button>
+                    <div id="areaResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-plus"></i> Crear Usuario TV</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="areaIdInput" class="form-label">ID del Área:</label>
+                        <input type="number" class="form-control" id="areaIdInput" placeholder="Ingresa el Area ID">
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="crearUsuarioTV()">
+                        <i class="fas fa-user-plus"></i> Crear Usuario TV
+                    </button>
+                    <div id="userResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user-edit"></i> Configurar Usuario Existente para ZF-Forrado</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Actualiza cualquier usuario existente para que use el área ZF-Forrado</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="employeeNumberInput" class="form-label">Número de Empleado:</label>
+                        <input type="number" class="form-control" id="employeeNumberInput" placeholder="Ej: 01">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="areaIdInputExisting" class="form-label">ID del Área:</label>
+                        <input type="number" class="form-control" id="areaIdInputExisting" placeholder="Area ID">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-warning" onclick="actualizarUsuario()">
+                            <i class="fas fa-sync"></i> Actualizar Usuario
+                        </button>
+                    </div>
+                </div>
+                <div id="updateResult" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Información</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-lightbulb"></i> Redirección Automática</h6>
+                    <p><strong>Quién es redirigido al Dashboard de Producción:</strong></p>
+                    <ul>
+                        <li>Usuarios con <strong>rol "tv"</strong></li>
+                        <li>Usuarios cuya <strong>área contenga "zf" y "forrado"</strong></li>
+                    </ul>
+                    <p><strong>Ejemplos:</strong></p>
+                    <ul>
+                        <li>Empleado #01 con área "ZF Forrado" → Dashboard de Producción</li>
+                        <li>Empleado #999999 con rol "tv" → Dashboard de Producción</li>
+                        <li>Otros usuarios → Home normal</li>
+                    </ul>
+                </div>
+                <p><strong>Área objetivo:</strong> Se busca un área que contenga "zf" en el customer name y "forrado" en el area name.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    async function buscarArea() {
+        try {
+            const response = await fetch('/Setup/FindZFForradoArea');
+            const data = await response.json();
+
+            const resultDiv = document.getElementById('areaResult');
+
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check"></i> Área Encontrada</h6>
+                        <p><strong>ID:</strong> ${data.areaId}</p>
+                        <p><strong>Customer:</strong> ${data.customerName}</p>
+                        <p><strong>Área:</strong> ${data.areaName}</p>
+                        <p><strong>Nombre Completo:</strong> ${data.fullName}</p>
+                        <button class="btn btn-sm btn-info" onclick="document.getElementById('areaIdInput').value = ${data.areaId}">
+                            <i class="fas fa-copy"></i> Usar este ID
+                        </button>
+                    </div>
+                `;
+            } else {
+                let html = `
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> ${data.message}</h6>
+                `;
+
+                if (data.availableAreas && data.availableAreas.length > 0) {
+                    html += `<p><strong>Áreas disponibles:</strong></p><ul>`;
+                    data.availableAreas.forEach(area => {
+                        html += `
+                            <li>
+                                ID: ${area.areaId} - ${area.customerName} ${area.areaName}
+                                <button class="btn btn-xs btn-sm btn-outline-info ms-2" onclick="document.getElementById('areaIdInput').value = ${area.areaId}">
+                                    Usar
+                                </button>
+                            </li>
+                        `;
+                    });
+                    html += `</ul>`;
+                }
+
+                html += `</div>`;
+                resultDiv.innerHTML = html;
+            }
+        } catch (error) {
+            document.getElementById('areaResult').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times"></i> Error: ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    async function crearUsuarioTV() {
+        const areaId = document.getElementById('areaIdInput').value;
+
+        if (!areaId) {
+            Swal.fire('Error', 'Por favor ingresa un Area ID', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/Setup/CreateTVUser', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(parseInt(areaId))
+            });
+
+            const data = await response.json();
+            const resultDiv = document.getElementById('userResult');
+
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check"></i> ${data.message}</h6>
+                        <p><strong>Usuario:</strong> ${data.user.name} (${data.user.employeeNumber})</p>
+                        <p><strong>Rol:</strong> ${data.user.role}</p>
+                        <p><strong>Área:</strong> ${data.user.area}</p>
+                        <p><strong>Area ID:</strong> ${data.areaId}</p>
+                    </div>
+                `;
+
+                Swal.fire('Éxito', 'Usuario TV creado correctamente', 'success');
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times"></i> ${data.message}
+                    </div>
+                `;
+
+                Swal.fire('Error', data.message, 'error');
+            }
+        } catch (error) {
+            document.getElementById('userResult').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times"></i> Error: ${error.message}
+                </div>
+            `;
+
+            Swal.fire('Error', 'Error de conexión', 'error');
+        }
+    }
+
+    async function actualizarUsuario() {
+        const employeeNumber = document.getElementById('employeeNumberInput').value;
+        const areaId = document.getElementById('areaIdInputExisting').value;
+
+        if (!employeeNumber) {
+            Swal.fire('Error', 'Por favor ingresa el número de empleado', 'error');
+            return;
+        }
+
+        if (!areaId) {
+            Swal.fire('Error', 'Por favor ingresa un Area ID', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/Setup/UpdateUserArea', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    employeeNumber: parseInt(employeeNumber),
+                    areaId: parseInt(areaId)
+                })
+            });
+
+            const data = await response.json();
+            const resultDiv = document.getElementById('updateResult');
+
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check"></i> ${data.message}</h6>
+                        <p><strong>Usuario:</strong> ${data.user.name} (${data.user.employeeNumber})</p>
+                        <p><strong>Rol:</strong> ${data.user.role}</p>
+                        <p><strong>Área:</strong> ${data.user.area}</p>
+                        <p><strong>Area ID:</strong> ${data.areaId}</p>
+                    </div>
+                `;
+
+                Swal.fire('Éxito', 'Usuario actualizado correctamente', 'success');
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times"></i> ${data.message}
+                    </div>
+                `;
+
+                Swal.fire('Error', data.message, 'error');
+            }
+        } catch (error) {
+            document.getElementById('updateResult').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times"></i> Error: ${error.message}
+                </div>
+            `;
+
+            Swal.fire('Error', 'Error de conexión', 'error');
+        }
+    }
+</script>
+
+<style>
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+</style>

@@ -1,0 +1,294 @@
+﻿@model GDIKPI.Models.ProductionLine
+
+@{
+    var areaId = Model.AreaId;
+    var standardTimeValue = Model.StandardTime.HasValue
+        ? Model.StandardTime.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        : "";
+}
+<form id="EditLineProductionForm">
+    <input type="hidden" id="editAreaId" name="editAreaId" value="@Model.AreaId">
+    <input type="hidden" id="editOriginalLineNumber" name="editOriginalLineNumber" value="@Model.LineNumber">
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label for="editAreaSelect" class="form-label">Área de Producción</label>
+            <select id="editAreaSelect" name="editAreaSelect" class="form-select" required>
+                <option value="">Seleccionar área...</option>
+                @if (ViewBag.Areaslist is SelectList areaList)
+                {
+                    foreach (var area in areaList)
+                    {
+                        <option value="@area.Value">@area.Text</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label for="editLineNumber" class="form-label">Número de Línea</label>
+            <input type="number" id="editLineNumber" name="editLineNumber" class="form-control"
+                   value="@Model.LineNumber" required min="1" placeholder="Ej: 1, 2, 3..." />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <label for="editLineName" class="form-label">Nombre/Alias de Línea (opcional)</label>
+            <input type="text" id="editLineName" name="editLineName" class="form-control"
+                   value="@Model.LineName" placeholder="Ej: metmel, área especial..." maxlength="100" />
+            <small class="text-muted">Si se especifica, se mostrará este nombre en lugar de "LÍNEA X"</small>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label for="editPeopleQty" class="form-label">Cantidad de Personas</label>
+            <input type="number" id="editPeopleQty" name="editPeopleQty" class="form-control"
+                   value="@Model.PersonalQuantity" placeholder="Número de operadores" min="1" required>
+        </div>
+
+        <div class="col-md-6">
+            <label for="editDailyGoal" class="form-label">Meta Diaria</label>
+            <input type="number" id="editDailyGoal" name="editDailyGoal" class="form-control"
+                   value="@Model.DailyGoal" placeholder="Meta por día" min="1" required>
+        </div>
+        <div class="col-md-6">
+            <label for="editStandardTime" class="form-label">Tiempo Estándar</label>
+            <input type="number" id="editStandardTime" name="editStandardTime" class="form-control"
+                   value="@standardTimeValue" placeholder="Ej: 0.45" min="0" step="0.00000001">
+        </div>
+        <div class="col-md-6 d-flex align-items-center">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editIsActive" name="editIsActive"
+                       @(Model.IsActive ? "checked" : "")>
+                <label class="form-check-label" for="editIsActive">
+                    <i class="fas fa-power-off me-1"></i>
+                    Línea Activa
+                </label>
+                <div class="form-text">
+                    <small class="text-muted">Desmarcar para ocultar la línea del dashboard</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <label for="supervisor" class="form-label">Supervisor Asignado</label>
+            <select id="supervisorUpdate" name="supervisor" class="form-select" required>
+                <option value="">Seleccionar supervisor...</option>
+                @if (ViewBag.UsersList is SelectList usersList)
+                {
+                    foreach (var user in usersList)
+                    {
+                        <option value="@user.Value">@user.Text</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">Permisos del Supervisor</label>
+        <div class="permissions-grid p-3 border rounded bg-light">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="permissionUpdate_create" name="permissions" value="2">
+                        <label class="form-check-label" for="permissionUpdate_create">
+                            <i class="fas fa-plus-circle text-success me-1"></i>
+                            Crear
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="permissionUpdate_update" name="permissions" value="3">
+                        <label class="form-check-label" for="permissionUpdate_update">
+                            <i class="fas fa-edit text-warning me-1"></i>
+                            Actualizar
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="permissionUpdate_delete" name="permissions" value="4">
+                        <label class="form-check-label" for="permissionUpdate_delete">
+                            <i class="fas fa-trash text-danger me-1"></i>
+                            Eliminar
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    El permiso básico (Ver) se asigna automáticamente. Selecciona los permisos adicionales.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">Horarios de Descanso</label>
+        <div class="time-grid p-3" style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+            <!-- Primer Descanso -->
+            <div class="mb-3">
+                <h6 class="mb-2">Primer Descanso</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label for="editBreak1Start" class="form-label small">Inicio</label>
+                        <input type="time" id="editBreak1Start" name="editBreak1Start" class="form-control"
+                               value="@ViewBag.Break1Start">
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label for="editBreak1End" class="form-label small">Fin</label>
+                        <input type="time" id="editBreak1End" name="editBreak1End" class="form-control"
+                               value="@ViewBag.Break1End">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Segundo Descanso -->
+            <div class="mb-3">
+                <h6 class="mb-2">Segundo Descanso</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label for="editBreak2Start" class="form-label small">Inicio</label>
+                        <input type="time" id="editBreak2Start" name="editBreak2Start" class="form-control"
+                               value="@ViewBag.Break2Start">
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label for="editBreak2End" class="form-label small">Fin</label>
+                        <input type="time" id="editBreak2End" name="editBreak2End" class="form-control"
+                               value="@ViewBag.Break2End">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!--
+<script>
+    $(function () {
+        // Llenar campos al cargar el modal
+        $('#editAreaSelect').val('@Model.AreaId');
+        $('#editAreaId').val('@Model.AreaId');
+        $('#editLineNumber').val('@Model.LineNumber');
+        $('#editOriginalLineNumber').val('@Model.LineNumber');
+        $('#editPeopleQty').val('@Model.PersonalQuantity');
+        $('#editDailyGoal').val('@Model.DailyGoal');
+        $('#editBreak1Start').val('@ViewBag.Break1Start');
+        $('#editBreak1End').val('@ViewBag.Break1End');
+        $('#editBreak2Start').val('@ViewBag.Break2Start');
+        $('#editBreak2End').val('@ViewBag.Break2End');
+
+        // Seleccionar supervisor actual
+        @if (ViewBag.Supervisor != null)
+        {
+                <text>$('#supervisorUpdate').val('@ViewBag.Supervisor');</text>
+        }
+
+        // Marcar permisos asignados
+        @if (ViewBag.AssignedPermissions != null)
+        {
+                <text>
+                    var assignedPermissions = @Html.Raw(Json.Serialize(ViewBag.AssignedPermissions));
+                    assignedPermissions.forEach(function(permissionId) {
+                        if (permissionId !== 1) {
+                            $('input[name="permissions"][value="' + permissionId + '"]').prop('checked', true);
+                        }
+                    });
+                </text>
+        }
+
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('EditProductionLineModal'));
+        modal.show();
+    });
+
+        $('#EditLineProductionForm').on('submit', function (e) {
+        e.preventDefault();
+
+        // Recoger permisos seleccionados (excluyendo el básico que se asigna automáticamente)
+        var selectedPermissions = [];
+        $('input[name="permissions"]:checked').each(function() {
+            selectedPermissions.push(parseInt($(this).val()));
+        });
+
+        const data = {
+            areaId: $('#editAreaId').val(),
+            originalLineNumber: $('#editOriginalLineNumber').val(),
+            lineNumber: $('#editLineNumber').val(),
+            dailyGoal: $('#editDailyGoal').val(),
+            personalQuantity: $('#editPeopleQty').val(),
+            break1Start: $('#editBreak1Start').val(),
+            break1End: $('#editBreak1End').val(),
+            break2Start: $('#editBreak2Start').val(),
+            break2End: $('#editBreak2End').val(),
+            supervisorEmployeeNumber: $('#supervisorUpdate').val(),
+            permissions: selectedPermissions // Esto ahora será procesado correctamente
+        };
+
+        console.log('Datos a enviar:', data);
+        console.log('Permisos seleccionados:', selectedPermissions);
+
+        // Enviar datos al servidor
+        $.ajax({
+            url: '/api/AreaApi/UpdateProductionLine',
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.success) {
+                    $('#EditProductionLineModal').modal('hide');
+                    if (typeof refreshProductionLinesTable === 'function') {
+                        refreshProductionLinesTable();
+                    } else {
+                        location.reload();
+                    }
+                    // Opcional: mostrar mensaje de éxito
+                    console.log('Línea actualizada correctamente');
+                } else {
+                    console.error('Error del servidor:', response.message);
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMessage = 'Error de conexión';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                console.error('Error AJAX:', errorMessage);
+                alert('Error: ' + errorMessage);
+            }
+        });
+    });
+</script>
+-->
+
+<script>
+    // Configurar datos del modelo para JavaScript
+    window.EditProductionLineData = {
+        model: {
+            areaId: '@Model.AreaId',
+            lineNumber: '@Model.LineNumber',
+            lineName: '@Model.LineName',
+            personalQuantity: '@Model.PersonalQuantity',
+            dailyGoal: '@Model.DailyGoal',
+            standardTime: '@standardTimeValue',
+            isActive: @(Model.IsActive.ToString().ToLower())
+        },
+        viewBag: {
+            break1Start: '@ViewBag.Break1Start',
+            break1End: '@ViewBag.Break1End',
+            break2Start: '@ViewBag.Break2Start',
+            break2End: '@ViewBag.Break2End',
+            supervisor: '@ViewBag.Supervisor',
+            assignedPermissions: @Html.Raw(Json.Serialize(ViewBag.AssignedPermissions ?? new int[0]))
+        }
+    };
+</script>
+<script src="~/js/Areas/editForm.js" asp-append-version="true"></script>

@@ -1,0 +1,545 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Escaneos de Operadores";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    .bg-gradient-operators {
+        background: linear-gradient(135deg, #2563eb 0%, #14b8a6 100%);
+    }
+
+    .metric-card {
+        border: 0;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .metric-card .metric-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .metric-card .metric-label {
+        color: #64748b;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .chart-container {
+        height: 340px;
+        position: relative;
+    }
+
+    .operators-dashboard-page {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .dashboard-main-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .operators-navbar {
+        margin-bottom: 1rem;
+    }
+
+    .filter-row {
+        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+    }
+
+    .filter-item {
+        flex: 1;
+        max-width: 220px;
+        min-width: 160px;
+    }
+
+    .filter-item label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .filter-item .form-control,
+    .filter-item .form-select {
+        font-size: 0.875rem;
+        height: calc(1.5em + 0.75rem + 2px);
+        padding: 0.375rem 0.5rem;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    #OperatorsScansTable {
+        margin-bottom: 0;
+    }
+
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+        margin: 0.75rem;
+    }
+
+    @@media (min-width: 768px) and (max-width: 1180px) {
+        html,
+        body {
+            overflow: hidden;
+        }
+
+        .container-fluid {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .operators-dashboard-page {
+            height: calc(100vh - 72px);
+            gap: 0.55rem;
+            overflow: hidden;
+        }
+
+        .operators-navbar {
+            margin-bottom: 0;
+            min-height: 48px;
+        }
+
+        .operators-navbar .container-fluid {
+            padding-bottom: 0.35rem;
+            padding-top: 0.35rem;
+        }
+
+        .operators-navbar .navbar-brand {
+            font-size: 1.05rem;
+        }
+
+        .operators-navbar small {
+            display: none;
+        }
+
+        .dashboard-metrics {
+            margin-bottom: 0 !important;
+        }
+
+        .dashboard-metrics .col-6 {
+            width: 25%;
+        }
+
+        .metric-card .card-body {
+            padding: 0.55rem 0.75rem;
+        }
+
+        .metric-card .metric-value {
+            font-size: 1.25rem;
+        }
+
+        .metric-card .metric-label {
+            font-size: 0.68rem;
+            white-space: nowrap;
+        }
+
+        .dashboard-main-grid {
+            flex: 1;
+            grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+            min-height: 0;
+        }
+
+        .chart-card,
+        .table-container {
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .chart-card .card-header,
+        .table-container .card-body {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .chart-card .card-header h5 {
+            font-size: 0.95rem;
+        }
+
+        .chart-card .card-body {
+            padding: 0.5rem;
+        }
+
+        .chart-container {
+            height: calc(100vh - 305px);
+            min-height: 250px;
+        }
+
+        .filter-row {
+            gap: 0.45rem;
+        }
+
+        .filter-item {
+            max-width: none;
+            min-width: calc(50% - 0.25rem);
+        }
+
+        .filter-item label {
+            font-size: 0.7rem;
+            margin-bottom: 0.1rem;
+        }
+
+        .filter-item .form-control,
+        .filter-item .form-select {
+            font-size: 0.78rem;
+            height: 30px;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .table-responsive {
+            margin-top: 0.35rem !important;
+        }
+
+        #OperatorsScansTable {
+            font-size: 0.78rem;
+        }
+
+        #OperatorsScansTable th,
+        #OperatorsScansTable td {
+            padding: 0.35rem 0.45rem;
+            vertical-align: middle;
+        }
+
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            font-size: 0.75rem;
+            margin: 0.35rem;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.15rem 0.4rem;
+        }
+    }
+
+    @@media (max-width: 767px) {
+        .filter-item {
+            max-width: none;
+            min-width: 100%;
+        }
+
+        .dashboard-main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="operators-dashboard-page">
+<nav class="navbar navbar-expand-lg navbar-dark bg-gradient-operators operators-navbar">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between w-100 align-items-center">
+            <div>
+                <h1 class="navbar-brand mb-0 h1">
+                    <i class="fas fa-barcode me-2"></i>
+                    Dashboard de Escaneos
+                </h1>
+                <small class="text-white-50">Visualizacion de escaneos por operador y operacion</small>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-light btn-sm" href="@Url.Action("OperatorStats", "ProductionOperatorsDashboard")">
+                    <i class="fas fa-chart-simple me-1"></i>
+                    Estadisticas
+                </a>
+                <button class="btn btn-outline-light btn-sm" id="btnScansExport">
+                    <i class="fas fa-download me-1"></i>
+                    Exportar
+                </button>
+                <button class="btn btn-outline-light btn-sm" id="btnAddOperator">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Gestion de Operadores
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="row g-3 mb-4 dashboard-metrics">
+    <div class="col-6 col-lg-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Escaneos</div>
+                <div class="metric-value" id="totalScansMetric">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Codigos unicos</div>
+                <div class="metric-value" id="uniqueCodesMetric">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Operadores</div>
+                <div class="metric-value" id="uniqueOperatorsMetric">0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label">Operaciones</div>
+                <div class="metric-value" id="operationsMetric">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-main-grid">
+<div class="charts-column d-flex flex-column gap-3">
+    <div class="card chart-card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-column me-2"></i>
+                Escaneos por operacion
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="operatorsScansChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="card chart-card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>
+                Historial de escaneos
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card table-container">
+    <div class="card-body border-bottom">
+        <div class="filter-row">
+            <div class="filter-item">
+                <label class="form-label">Operacion</label>
+                <select class="form-select" id="operationFilter">
+                    <option value="">Todas</option>
+                    @if (ViewBag.OperationsList is SelectList operationsList)
+                    {
+                        foreach (var operation in operationsList)
+                        {
+                            <option value="@operation.Value">@operation.Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="filter-item">
+                <label class="form-label">Empleado</label>
+                <input type="text" class="form-control" id="employeeFilter" list="employeeFilterOptions" placeholder="Numero o nombre" autocomplete="off">
+                <datalist id="employeeFilterOptions"></datalist>
+            </div>
+            <div class="filter-item">
+                <label class="form-label">Fecha inicio</label>
+                <input type="date" class="form-control" id="startDateFilter">
+            </div>
+            <div class="filter-item">
+                <label class="form-label">Fecha fin</label>
+                <input type="date" class="form-control" id="endDateFilter">
+            </div>
+                    <div class="filter-item">
+                        <label class="form-label">Hora inicio</label>
+                        <input type="time" class="form-control" id="startTimeFilter">
+                    </div>
+
+                    <div class="filter-item">
+                        <label class="form-label">Hora fin</label>
+                        <input type="time" class="form-control" id="endTimeFilter">
+                    </div>
+        </div>
+    </div>
+
+    <div class="table-responsive mt-3">
+        <table class="table table-striped table-hover" id="OperatorsScansTable">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Empleado</th>
+                    <th>Nombre</th>
+                    <th>Operacion</th>
+                    <th>Codigo</th>
+                    <th style="width:80px">Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="operatorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-operators text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-users-gear me-2"></i>
+                    Gestionar Operadores
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="operatorListView" class="p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 fw-bold">Listado de operadores</h6>
+                        <button class="btn btn-primary btn-sm" id="btnNewOperatorFromList">
+                            <i class="fas fa-plus me-1"></i>Nuevo Operador
+                        </button>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm" id="operatorSearchInput" placeholder="Buscar por empleado, nombre u operacion...">
+                    </div>
+                    <div class="table-responsive" style="max-height:320px; overflow-y:auto">
+                        <table class="table table-sm table-hover mb-0" id="operatorListTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Empleado</th>
+                                    <th>Nombre completo</th>
+                                    <th>Operacion</th>
+                                    <th class="text-center">Activo</th>
+                                    <th class="text-center" style="width:100px">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="operatorListBody">
+                                <tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="operatorFormView" style="display:none" class="p-3">
+                    <a href="#" id="btnBackToList" class="text-decoration-none small mb-3 d-inline-block">
+                        <i class="fas fa-arrow-left me-1"></i>Volver al listado
+                    </a>
+                    <form id="operatorForm" novalidate>
+                        <input type="hidden" id="editOperatorId" value="">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Numero de empleado <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="opEmployeeNumber" required min="1" step="1">
+                                <div class="invalid-feedback">Ingrese un numero de empleado valido</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control text-uppercase" id="opName" required maxlength="50" style="text-transform:uppercase">
+                                <div class="invalid-feedback">Ingrese el nombre</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Apellido <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control text-uppercase" id="opLastname" required maxlength="100" style="text-transform:uppercase">
+                                <div class="invalid-feedback">Ingrese el apellido</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Area</label>
+                                <select class="form-select" id="opArea">
+                                    <option value="">Seleccione un area</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Operacion</label>
+                                <input type="text" class="form-control" id="opOperation" list="operationOptions" maxlength="100" autocomplete="off">
+                                <datalist id="operationOptions"></datalist>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Meta (produccion)</label>
+                                <input type="number" class="form-control" id="opGoal" min="0" step="1">
+                            </div>
+                            <div class="col-6 d-flex align-items-end pb-1">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="opActive" checked>
+                                    <label class="form-check-label fw-semibold" for="opActive">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-danger" id="btnDeleteOperator" style="display:none">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+                <button type="submit" class="btn btn-primary" id="btnSaveOperator" form="operatorForm">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="scanEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-operators text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-pen-to-square me-2"></i>
+                    Editar Escaneo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="scanEditForm" novalidate>
+                    <input type="hidden" id="editScanId" value="">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Empleado <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editScanEmployee" list="editScanEmployeeOptions" placeholder="Numero o nombre" required autocomplete="off">
+                        <datalist id="editScanEmployeeOptions"></datalist>
+                        <div class="invalid-feedback">Seleccione un empleado valido</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Operacion</label>
+                        <input type="text" class="form-control" id="editScanOperation" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Codigo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editScanCode" required maxlength="50">
+                        <div class="invalid-feedback">Ingrese el codigo</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Fecha</label>
+                            <input type="date" class="form-control" id="editScanDate">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Hora</label>
+                            <input type="time" class="form-control" id="editScanTime">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveScanEdit" form="scanEditForm">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="~/js/ProductionOperatorsDashboard/list.js"></script>
+}

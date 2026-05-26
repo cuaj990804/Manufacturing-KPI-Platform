@@ -1,0 +1,254 @@
+﻿/* Dashboard Production - Industrial Design */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.logout-button-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+}
+
+html, body {
+    height: 100dvh;
+    width: 100vw;
+    background-color: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+}
+
+.navbar {
+    display: none !important;
+}
+
+.production-card.success {
+    border-color: #4caf50; /* verde */
+}
+
+
+
+.production-card.danger {
+    border-color: #f44336; /* rojo */
+}
+
+.card-header.success {
+    background: #4caf50; /* verde */
+}
+
+
+
+.card-header.danger {
+    background: #f44336; /* rojo opcional */
+}
+
+/* Dashboard - GRID */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(45vh, 1fr);
+    gap: 9px;
+    padding: 9px;
+    width: 100vw;
+    height: 100vh;
+    align-content: start;
+}
+
+/* Card */
+.production-card {
+    background: #252525;
+    border: 2px solid #d32f2f;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Header */
+.card-header {
+    background: #d32f2f;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.line-title {
+    font-size: clamp(16px, 1.5vw, 32px);
+    font-weight: 700;
+}
+
+.badge {
+    font-size: clamp(10px, 1vw, 18px);
+}
+
+/* GRID */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    flex: 1;
+    gap: 1px;
+    background: #3a3a3a;
+    min-height: 0;
+}
+
+/* METRIC */
+.metric {
+    background: #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 🔥 clave */
+    padding: 6px 6px 4px 6px; /* 🔥 menos espacio */
+    min-height: 0;
+}
+
+/* LABEL */
+.metric-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(9px, 1.2vw, 18px);
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 0; /* 🔥 pegado al número */
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* VALUE */
+.metric-value {
+    display: flex;
+    align-items: flex-start; /* 🔥 sube el número */
+    justify-content: center;
+    font-size: clamp(32px, 20vh, 25vw);
+    font-weight: 900;
+    line-height: 0.8; /* 🔥 compacto */
+    letter-spacing: -2px;
+    flex: 1;
+}
+
+/* COLORS */
+.metric.requerimiento .metric-value {
+    color: #ff9800;
+}
+
+.metric.balance .metric-value {
+    color: #f44336;
+}
+
+.metric.balance.positive .metric-value {
+    color: #4caf50;
+}
+
+.metric.rechazos .metric-value {
+    color: #f44336;
+}
+
+.metric.eficiencia .metric-value {
+    color: #2196f3;
+}
+
+/* UNIT */
+.metric-unit {
+    font-size: 0.3em;
+    margin-left: 6px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+/* Tablets */
+@media (max-width: 1024px) {
+    body {
+        overflow: auto;
+    }
+
+    .dashboard {
+        grid-template-columns: 1fr;
+        grid-auto-rows: minmax(400px, auto);
+        height: auto;
+    }
+
+    .metric-value {
+        font-size: clamp(40px, 20vh, 20vw);
+    }
+}
+
+/* Móvil */
+@media (max-width: 767px) {
+    .dashboard {
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .metric-value {
+        font-size: clamp(30px, 20vh, 20vw);
+    }
+}
+
+/* Desktop estándar */
+@media (min-width: 1025px) and (max-width: 1799px) {
+    .dashboard {
+        grid-auto-rows: minmax(42vh, 1fr);
+    }
+
+    .metric-value {
+        font-size: clamp(40px, 20vh, 20vw);
+    }
+}
+
+/* Full HD+ */
+@media (min-width: 1800px) {
+    html, body {
+        overflow-y: auto;
+    }
+
+        html::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        html::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        html::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+        }
+
+            html::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+    html {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .dashboard {
+        grid-auto-rows: minmax(45vh, 1fr);
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .metric-value {
+        font-size: clamp(30px, 20vh, 30vw);
+    }
+}
+
+/* 4K */
+@media (min-width: 3000px) {
+    .dashboard {
+        grid-auto-rows: minmax(48vh, 1fr);
+        gap: 24px;
+    }
+
+    .metric-value {
+        font-size: clamp(60px, 20vh, 20vw);
+    }
+}

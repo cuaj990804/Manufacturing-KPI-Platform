@@ -1,0 +1,183 @@
+@model GDIKPI.DTO.DefectsQr.DefectsQrPageViewModel
+@{
+    ViewData["Title"] = "QR de Defectos y Comandos";
+}
+
+<div class="container-fluid mt-3 qr-module">
+    <div class="print-title">DEFECTOS @Model.SelectedAreaName</div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 no-print">
+        <div>
+            <h3 class="mb-1"><i class="fas fa-qrcode"></i> Impresion QR de Defectos y Comandos</h3>
+            <div class="text-muted">Area seleccionada: <strong>@Model.SelectedAreaName</strong></div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" onclick="printSection('defects')">Imprimir Defectos</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="printSection('commands')">Imprimir Comandos</button>
+            <button type="button" class="btn btn-success" onclick="printSection('all')">Imprimir Todo</button>
+        </div>
+    </div>
+
+    <form method="get" asp-controller="DefectsQr" asp-action="Index" class="row g-2 align-items-end mb-4 no-print">
+        <div class="col-md-5">
+            <label for="areaId" class="form-label">Area</label>
+            <select id="areaId" name="areaId" class="form-select">
+                @foreach (var area in Model.Areas)
+                {
+                    <option value="@area.AreaId" selected="@(area.AreaId == Model.SelectedAreaId)">@area.DisplayName</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Cargar</button>
+        </div>
+    </form>
+
+    <section class="mb-4 commands-section">
+        <h4 class="section-title">Comandos (@Model.Commands.Count)</h4>
+        @if (!Model.Commands.Any())
+        {
+            <div class="alert alert-warning">No hay comandos activos.</div>
+        }
+        else
+        {
+            <div class="qr-grid">
+                @foreach (var command in Model.Commands)
+                {
+                    <article class="qr-card">
+                        <div class="qr-code" data-qr="@command.QrValue"></div>
+                        <div class="qr-meta">
+                            <div class="qr-title">@command.CommandText</div>
+                            <div class="qr-sub">@(string.IsNullOrWhiteSpace(command.Description) ? "Sin descripcion" : command.Description)</div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="mb-4 defects-section">
+        <h4 class="section-title">Defectos (@Model.Defects.Count)</h4>
+        @if (!Model.Defects.Any())
+        {
+            <div class="alert alert-warning">No hay defectos registrados para esta area.</div>
+        }
+        else
+        {
+            <div class="qr-grid">
+                @foreach (var defect in Model.Defects)
+                {
+                    <article class="qr-card">
+                        <div class="qr-code" data-qr="@defect.QrValue"></div>
+                        <div class="qr-meta">
+                            <div class="qr-title">@defect.DefectName</div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.qr-code').forEach(function (el) {
+            const value = el.getAttribute('data-qr');
+            if (!value) return;
+            new QRCode(el, {
+                text: value,
+                width: 56,
+                height: 56,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        });
+    });
+
+    function printSection(mode) {
+        document.body.classList.remove('print-commands');
+        if (mode === 'commands') {
+            document.body.classList.add('print-commands');
+        }
+        window.print();
+    }
+</script>
+
+<style>
+    .qr-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 8px;
+    }
+
+    .qr-card {
+        border: 1px solid #d9dee3;
+        border-radius: 8px;
+        background: #fff;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        break-inside: avoid;
+    }
+
+    .qr-code {
+        width: 56px;
+        min-width: 56px;
+        height: 56px;
+        border: 1px solid #efefef;
+        padding: 2px;
+        background: #fff;
+    }
+
+    .qr-title {
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 4px;
+    }
+
+    .qr-sub {
+        font-size: .88rem;
+        color: #5b6570;
+        line-height: 1.25;
+    }
+
+    .section-title {
+        border-bottom: 2px solid #eef2f7;
+        padding-bottom: 6px;
+        margin-bottom: 12px;
+    }
+
+    .print-title {
+        display: none;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+
+    @@media print {
+        .no-print,
+        nav,
+        header,
+        footer {
+            display: none !important;
+        }
+
+        .container-fluid {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .print-title {
+            display: block !important;
+        }
+    }
+
+    @@media print {
+        body.print-commands .defects-section {
+            display: none !important;
+        }
+    }
+</style>

@@ -1,0 +1,1203 @@
+﻿@model GDIKPI.ViewModels.PanelControlViewModel
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> Gestión de Usuarios y Permisos</h2>
+    <div>
+        <button type="button" class="btn btn-primary me-2" onclick="openAddUserModal()">
+            <i class="fas fa-user-plus"></i> Agregar Usuario
+        </button>
+        <button type="button" class="btn btn-success" onclick="openPermissionsModal()">
+            <i class="fas fa-key"></i> Gestionar Permisos
+        </button>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" id="searchUser" class="form-control" placeholder="Buscar por nombre o número de empleado...">
+    </div>
+    <div class="col-md-3">
+        <select id="filterArea" class="form-select">
+            <option value="">Todas las áreas</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="Production">Production</option>
+            <option value="Quality">Quality</option>
+            <option value="IT">IT</option>
+            <option value="Administrative">Administrative</option>
+            <option value="Engineering">Engineering</option>
+            <option value="RH">RH</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select id="filterRole" class="form-select">
+            <option value="">Todos los roles</option>
+            <option value="manager">Manager</option>
+            <option value="operator">Operator</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="auditor">Auditor</option>
+            <option value="admin">Admin</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered" id="usersTable">
+        <thead>
+            <tr>
+                <th>Empleado</th>
+                <th>Nombre</th>
+                <th>Rol</th>
+                <th>Área</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody">
+            <!-- Se carga dinámicamente vía JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Controles de paginación -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <span id="paginationInfo" class="text-muted">Cargando...</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <label for="pageSizeSelect" class="me-2 mb-0">Registros por página:</label>
+        <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+    </div>
+    <nav aria-label="Paginación de usuarios">
+        <ul class="pagination mb-0" id="paginationControls">
+            <!-- Se genera dinámicamente -->
+        </ul>
+    </nav>
+</div>
+
+<!-- Modal para Agregar Usuario -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus"></i> Agregar Nuevo Usuario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="employeeNumber" class="form-label">Número de Empleado *</label>
+                                <input type="number" class="form-control" id="employeeNumber" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="userName" class="form-label">Nombre Completo *</label>
+                                <input type="text" class="form-control" id="userName" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="userRole" class="form-label">Rol *</label>
+                                <select class="form-select" id="userRole" required>
+                                    <option value="">Seleccionar rol</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="operator">Operator</option>
+                                    <option value="supervisor">Supervisor</option>
+                                    <option value="auditor">Auditor</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="userArea" class="form-label">Área</label>
+                                <select class="form-select" id="userArea">
+                                    <option value="">Sin área específica</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Production">Production</option>
+                                    <option value="Quality">Quality</option>
+                                    <option value="IT">IT</option>
+                                    <option value="Administrative">Administrative</option>
+                                    <option value="Engineering">Engineering</option>
+                                    <option value="RH">RH</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">
+                    <i class="fas fa-save"></i> Guardar Usuario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Gestionar Permisos -->
+<div class="modal fade" id="permissionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-key"></i> Gestionar Permisos de Usuario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="selectUserPermissions" class="form-label">Seleccionar Usuario *</label>
+                        <input type="text" class="form-control" id="selectUserPermissions" list="usersList"
+                               placeholder="Buscar por nombre o número de empleado..."
+                               autocomplete="off">
+                        <datalist id="usersList">
+                            <!-- Se carga dinámicamente -->
+                        </datalist>
+                        <small class="text-muted">Escriba al menos 2 caracteres para buscar</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="selectModulePermissions" class="form-label">Seleccionar Módulo *</label>
+                        <select class="form-select" id="selectModulePermissions">
+                            <option value="">Seleccionar módulo...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3" id="areaSelectionRow" style="display: none;">
+                    <div class="col-md-12">
+                        <label for="selectAreaPermissions" class="form-label">Seleccionar Área</label>
+                        <select class="form-select" id="selectAreaPermissions">
+                            <option value="">Todas las áreas</option>
+                        </select>
+                        <small class="text-muted" id="areaSelectionHelp">Puede dejarlo en todas las áreas cuando el módulo no requiera una área específica.</small>
+                    </div>
+                </div>
+
+                <div id="userPermissionsContent" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="permissionsInfoText">Seleccione los permisos que desea otorgar al usuario para el módulo.</span>
+                    </div>
+                    <div class="row">
+                        <div id="permissionsColumn" class="col-md-12">
+                            <h6><i class="fas fa-shield-alt"></i> Permisos de Visualización</h6>
+                            <div id="modulePermissions" class="border rounded p-3 mb-3" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Se carga dinámicamente -->
+                            </div>
+                        </div>
+                        <div id="linesColumn" class="col-md-6" style="display: none;">
+                            <h6><i class="fas fa-industry"></i> Líneas de Producción</h6>
+                            <small class="text-muted">Seleccionar líneas otorga automáticamente permiso de creación/edición</small>
+                            <div id="productionLines" class="border rounded p-3 mb-3 mt-2" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Se carga dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="savePermissions()" style="display: none;" id="savePermissionsBtn">
+                    <i class="fas fa-save"></i> Guardar Permisos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+}
+
+@section Scripts {
+<script>
+    // Variables globales
+    let allUsers = [];
+    let selectedEmployeeNumber = null;
+    let selectedModuleId = null;
+    let selectedAreaId = null;
+    let requiresArea = false; // Si el módulo requiere selección de área
+    let requiresLines = false; // Si el módulo requiere selección de líneas
+    let allPermissionsCache = []; // Cache de todos los permisos disponibles
+    let searchTimeout = null; // Para debounce en búsqueda de usuarios
+
+    // Variables para paginación
+    let currentPage = 1;
+    let pageSize = 10;
+    let currentFilters = {
+        search: '',
+        area: '',
+        role: ''
+    };
+
+    $(document).ready(function() {
+        loadUsers();
+        loadAreasForPermissions();
+        loadModules();
+        loadAvailablePermissions();
+        setupFilters();
+        loadUsersPaginated(); // Cargar usuarios con paginación
+    });
+
+    // Cargar usuarios iniciales (solo para cache local)
+    function loadUsers() {
+        @foreach (var user in Model.Users)
+        {
+            <text>
+            allUsers.push({
+                employeeNumber: @user.EmployeeNumber,
+                name: '@user.Name'
+            });
+            </text>
+        }
+    }
+
+    // Buscar usuarios con debounce (usa el servidor si hay muchos usuarios)
+    function searchUsers(searchTerm) {
+        // Limpiar timeout anterior
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+
+        // Si la búsqueda es muy corta, limpiar el datalist
+        if (searchTerm.length < 2) {
+            document.getElementById('usersList').innerHTML = '';
+            return;
+        }
+
+        // Aplicar debounce de 300ms
+        searchTimeout = setTimeout(() => {
+            // Si hay menos de 100 usuarios, filtrar localmente para mejor rendimiento
+            if (allUsers.length < 100) {
+                const term = searchTerm.toLowerCase();
+                const filteredUsers = allUsers.filter(user =>
+                    user.name.toLowerCase().includes(term) ||
+                    user.employeeNumber.toString().includes(term)
+                ).slice(0, 20); // Limitar a 20 resultados
+
+                updateDatalist(filteredUsers);
+            } else {
+                // Si hay muchos usuarios, usar búsqueda del servidor
+                fetch(`/api/PanelControl/SearchUsers?search=${encodeURIComponent(searchTerm)}&limit=20`)
+                    .then(response => response.json())
+                    .then(users => {
+                        updateDatalist(users);
+                    })
+                    .catch(error => {
+                        console.error('Error searching users:', error);
+                        // Fallback a búsqueda local si falla el servidor
+                        const term = searchTerm.toLowerCase();
+                        const filteredUsers = allUsers.filter(user =>
+                            user.name.toLowerCase().includes(term) ||
+                            user.employeeNumber.toString().includes(term)
+                        ).slice(0, 20);
+                        updateDatalist(filteredUsers);
+                    });
+            }
+        }, 300);
+    }
+
+    // Actualizar el datalist con los usuarios filtrados
+    function updateDatalist(users) {
+        const datalist = document.getElementById('usersList');
+        datalist.innerHTML = '';
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = `${user.employeeNumber} - ${user.name}`;
+            option.setAttribute('data-employee', user.employeeNumber);
+            datalist.appendChild(option);
+        });
+    }
+
+    // Cargar usuarios con paginación
+    function loadUsersPaginated(page = currentPage) {
+        currentPage = page;
+
+        const params = new URLSearchParams({
+            page: currentPage,
+            pageSize: pageSize,
+            search: currentFilters.search,
+            area: currentFilters.area,
+            role: currentFilters.role
+        });
+
+        fetch(`/api/PanelControl/GetUsersPaginated?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                renderUsersTable(data.users);
+                renderPagination(data.pagination);
+                updatePaginationInfo(data.pagination);
+            })
+            .catch(error => {
+                console.error('Error loading users:', error);
+                Swal.fire('Error', 'Error al cargar usuarios', 'error');
+            });
+    }
+
+    // Renderizar tabla de usuarios
+    function renderUsersTable(users) {
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No se encontraron usuarios</td></tr>';
+            return;
+        }
+
+        users.forEach(user => {
+            const badgeClass = user.role?.toLowerCase() === 'admin' ? 'danger' : 'secondary';
+            const row = `
+                <tr data-employee="${user.employeeNumber}" data-name="${user.name}" data-area="${user.area || ''}" data-role="${user.role || ''}">
+                    <td><strong>${user.employeeNumber}</strong></td>
+                    <td>${user.name}</td>
+                    <td>
+                        <span class="badge bg-${badgeClass}">
+                            ${user.role || 'N/A'}
+                        </span>
+                    </td>
+                    <td>${user.area || 'N/A'}</td>
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    onclick="manageUserPermissions(${user.employeeNumber})"
+                                    title="Gestionar Permisos">
+                                <i class="fas fa-key"></i> Permisos
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger"
+                                    onclick="deleteUser(${user.employeeNumber}, '${user.name}')"
+                                    title="Eliminar Usuario">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
+    // Renderizar controles de paginación
+    function renderPagination(pagination) {
+        const paginationControls = document.getElementById('paginationControls');
+        paginationControls.innerHTML = '';
+
+        const { currentPage, totalPages } = pagination;
+
+        // Botón "Anterior"
+        const prevDisabled = currentPage === 1 ? 'disabled' : '';
+        paginationControls.innerHTML += `
+            <li class="page-item ${prevDisabled}">
+                <a class="page-link" href="#" onclick="loadUsersPaginated(${currentPage - 1}); return false;">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </a>
+            </li>`;
+
+        // Páginas numeradas (mostrar máximo 5 páginas)
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        // Primera página
+        if (startPage > 1) {
+            paginationControls.innerHTML += `
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="loadUsersPaginated(1); return false;">1</a>
+                </li>`;
+            if (startPage > 2) {
+                paginationControls.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        // Páginas del rango
+        for (let i = startPage; i <= endPage; i++) {
+            const active = i === currentPage ? 'active' : '';
+            paginationControls.innerHTML += `
+                <li class="page-item ${active}">
+                    <a class="page-link" href="#" onclick="loadUsersPaginated(${i}); return false;">${i}</a>
+                </li>`;
+        }
+
+        // Última página
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationControls.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            paginationControls.innerHTML += `
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="loadUsersPaginated(${totalPages}); return false;">${totalPages}</a>
+                </li>`;
+        }
+
+        // Botón "Siguiente"
+        const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+        paginationControls.innerHTML += `
+            <li class="page-item ${nextDisabled}">
+                <a class="page-link" href="#" onclick="loadUsersPaginated(${currentPage + 1}); return false;">
+                    Siguiente <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>`;
+    }
+
+    // Actualizar información de paginación
+    function updatePaginationInfo(pagination) {
+        const { currentPage, pageSize, totalRecords, totalPages } = pagination;
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalRecords);
+
+        document.getElementById('paginationInfo').textContent =
+            `Mostrando ${start} a ${end} de ${totalRecords} registros`;
+    }
+
+    // Cargar módulos
+    function loadModules() {
+        fetch('/api/PanelControl/GetModules')
+            .then(response => response.json())
+            .then(modules => {
+                const selectModule = document.getElementById('selectModulePermissions');
+                selectModule.innerHTML = '<option value="">Seleccionar módulo...</option>';
+                modules.forEach(module => {
+                    const option = document.createElement('option');
+                    option.value = module.moduleId;
+                    option.textContent = module.moduleName;
+                    selectModule.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading modules:', error);
+            });
+    }
+
+    // Cargar áreas para el selector de permisos
+    function loadAreasForPermissions() {
+        fetch('/api/PanelControl/GetAllAreas')
+            .then(response => response.json())
+            .then(areas => {
+                const selectArea = document.getElementById('selectAreaPermissions');
+                selectArea.innerHTML = '<option value="">Todas las áreas</option>';
+                areas.forEach(area => {
+                    const option = document.createElement('option');
+                    option.value = area.areaId;
+                    option.textContent = area.customerName + ' ' + area.areaName;
+                    selectArea.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading areas:', error);
+            });
+    }
+
+    // Abrir modal para agregar usuario
+    function openAddUserModal() {
+        document.getElementById('addUserForm').reset();
+        new bootstrap.Modal(document.getElementById('addUserModal')).show();
+    }
+
+    // Abrir modal de permisos
+    function openPermissionsModal() {
+        new bootstrap.Modal(document.getElementById('permissionsModal')).show();
+    }
+
+    // Guardar usuario
+    function saveUser() {
+        const employeeNumber = document.getElementById('employeeNumber').value;
+        const name = document.getElementById('userName').value;
+        const role = document.getElementById('userRole').value;
+        const area = document.getElementById('userArea').value;
+
+        if (!employeeNumber || !name || !role) {
+            Swal.fire('Error', 'Por favor complete todos los campos obligatorios', 'error');
+            return;
+        }
+
+        const userData = {
+            employeeNumber: parseInt(employeeNumber),
+            name: name,
+            role: role,
+            area: area || null
+        };
+
+        fetch('/api/PanelControl/AddUser', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire('Éxito', 'Usuario creado correctamente', 'success')
+                    .then(() => {
+                        location.reload();
+                    });
+            } else {
+                Swal.fire('Error', data.message || 'Error al crear usuario', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error', 'Error de conexión', 'error');
+        });
+    }
+
+    // Gestionar permisos de usuario específico
+    function manageUserPermissions(employeeNumber) {
+        selectedEmployeeNumber = employeeNumber;
+        selectedModuleId = null;
+        selectedAreaId = null;
+
+        // Buscar el usuario y establecer el valor en el input
+        const user = allUsers.find(u => u.employeeNumber === employeeNumber);
+        if (user) {
+            document.getElementById('selectUserPermissions').value = `${user.employeeNumber} - ${user.name}`;
+        }
+
+        document.getElementById('selectModulePermissions').value = '';
+        document.getElementById('selectAreaPermissions').value = '';
+        document.getElementById('userPermissionsContent').style.display = 'none';
+        document.getElementById('savePermissionsBtn').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('permissionsModal')).show();
+    }
+
+    // Eliminar usuario
+    function deleteUser(employeeNumber, userName) {
+        Swal.fire({
+            title: '¿Eliminar usuario?',
+            text: `¿Está seguro de eliminar al usuario ${userName}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/api/PanelControl/DeleteUser/${employeeNumber}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Eliminado', 'Usuario eliminado correctamente', 'success')
+                            .then(() => {
+                                loadUsersPaginated(); // Recargar la página actual
+                            });
+                    } else {
+                        Swal.fire('Error', data.message || 'Error al eliminar usuario', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Error de conexión', 'error');
+                });
+            }
+        });
+    }
+
+    // Cargar permisos de usuario para un módulo y área
+    function loadUserModulePermissions() {
+        const inputValue = document.getElementById('selectUserPermissions').value;
+        const moduleId = document.getElementById('selectModulePermissions').value;
+        const areaId = document.getElementById('selectAreaPermissions').value;
+
+        // Extraer el número de empleado del valor del input (formato: "123 - Nombre Usuario")
+        let employeeNumber = null;
+        if (inputValue) {
+            const match = inputValue.match(/^(\d+)\s*-/);
+            if (match) {
+                employeeNumber = match[1];
+            }
+        }
+
+        // Validar campos requeridos
+        if (!employeeNumber || !moduleId) {
+            document.getElementById('userPermissionsContent').style.display = 'none';
+            document.getElementById('savePermissionsBtn').style.display = 'none';
+            return;
+        }
+
+        // Los módulos con líneas sí requieren un área específica
+        if (requiresLines && !areaId) {
+            document.getElementById('userPermissionsContent').style.display = 'none';
+            document.getElementById('savePermissionsBtn').style.display = 'none';
+            return;
+        }
+
+        selectedEmployeeNumber = employeeNumber;
+        selectedModuleId = moduleId;
+        selectedAreaId = areaId || null;
+
+        document.getElementById('userPermissionsContent').style.display = 'block';
+        document.getElementById('savePermissionsBtn').style.display = 'block';
+
+        if (requiresArea && areaId) {
+            if (requiresLines) {
+                // Módulo con área Y líneas (Registro de Producción)
+                document.getElementById('permissionsColumn').className = 'col-md-6';
+                document.getElementById('linesColumn').style.display = 'block';
+                document.getElementById('permissionsInfoText').textContent =
+                    'Marque "View" para solo visualizar, o seleccione líneas para otorgar permisos de creación/edición automáticamente.';
+
+                Promise.all([
+                    fetch(`/api/PanelControl/GetUserModulePermissions/${employeeNumber}/${moduleId}`).then(r => r.json()),
+                    fetch('/api/PanelControl/GetAllPermissions').then(r => r.json()),
+                    fetch(`/api/PanelControl/GetUserAreaLines/${employeeNumber}/${areaId}`).then(r => r.json()),
+                    fetch(`/api/PanelControl/GetLinesByArea/${areaId}`).then(r => r.json())
+                ])
+                .then(([userModulePerms, allPermissions, userLines, areaLines]) => {
+                    renderModulePermissions(userModulePerms, allPermissions);
+                    renderProductionLines(userLines, areaLines);
+                })
+                .catch(error => {
+                    console.error('Error loading permissions:', error);
+                    Swal.fire('Error', 'Error al cargar permisos', 'error');
+                });
+            } else {
+                // Módulo con área opcional
+                document.getElementById('permissionsColumn').className = 'col-md-12';
+                document.getElementById('linesColumn').style.display = 'none';
+                document.getElementById('permissionsInfoText').textContent =
+                    'Seleccione los permisos del área que desea otorgar al usuario para el módulo.';
+
+                Promise.all([
+                    fetch(`/api/PanelControl/GetUserModulePermissions/${employeeNumber}/${moduleId}`).then(r => r.json()),
+                    fetch('/api/PanelControl/GetAllPermissions').then(r => r.json())
+                ])
+                .then(([userModulePerms, allPermissions]) => {
+                    renderModulePermissions(userModulePerms, allPermissions);
+                })
+                .catch(error => {
+                    console.error('Error loading permissions:', error);
+                    Swal.fire('Error', 'Error al cargar permisos', 'error');
+                });
+            }
+        } else {
+            // Módulo sin área o aplicable a todas las áreas: solo cargar permisos
+            document.getElementById('permissionsColumn').className = 'col-md-12';
+            document.getElementById('linesColumn').style.display = 'none';
+            document.getElementById('permissionsInfoText').textContent =
+                requiresArea
+                    ? 'Seleccione los permisos que desea otorgar al usuario para el módulo en todas las áreas.'
+                    : 'Seleccione los permisos que desea otorgar al usuario para el módulo.';
+
+            Promise.all([
+                fetch(`/api/PanelControl/GetUserModulePermissions/${employeeNumber}/${moduleId}`).then(r => r.json()),
+                fetch('/api/PanelControl/GetAllPermissions').then(r => r.json())
+            ])
+            .then(([userModulePerms, allPermissions]) => {
+                renderModulePermissions(userModulePerms, allPermissions);
+            })
+            .catch(error => {
+                console.error('Error loading permissions:', error);
+                Swal.fire('Error', 'Error al cargar permisos', 'error');
+            });
+        }
+    }
+
+    // Renderizar permisos del módulo
+    function renderModulePermissions(userPerms, allPermissions) {
+        const container = document.getElementById('modulePermissions');
+        let html = '<div class="row">';
+
+        console.log('All permissions:', allPermissions);
+
+        // Guardar todos los permisos en cache para uso posterior
+        allPermissionsCache = allPermissions;
+
+        // Filtrar solo View (Create se asigna automáticamente al seleccionar líneas)
+        const allowedPermissions = allPermissions.filter(p => {
+            const permName = p.name.toLowerCase();
+            return permName === 'view';
+        });
+
+        console.log('Allowed permissions (View):', allowedPermissions);
+
+        if (allowedPermissions.length === 0) {
+            html += '<div class="col-12"><p class="text-warning">No hay permisos disponibles. Asegúrate de que exista el permiso "View" en la base de datos.</p></div>';
+        }
+
+        allowedPermissions.forEach(permission => {
+            const isChecked = userPerms.some(up => up.permissionId === permission.permissionId);
+            html += `
+                <div class="col-12 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input module-permission" type="checkbox"
+                               id="perm_${permission.permissionId}"
+                               data-permission-id="${permission.permissionId}"
+                               ${isChecked ? 'checked' : ''}>
+                        <label class="form-check-label" for="perm_${permission.permissionId}">
+                            <strong>${permission.name}</strong>
+                            ${permission.description ? `<br><small class="text-muted">${permission.description}</small>` : ''}
+                        </label>
+                    </div>
+                </div>`;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // Renderizar líneas de producción
+    function renderProductionLines(userLines, allLines) {
+        const container = document.getElementById('productionLines');
+        let html = '';
+
+        if (allLines.length === 0) {
+            html = '<p class="text-muted">No hay líneas de producción disponibles</p>';
+        } else {
+            // Opción "Todas las líneas"
+            const allLinesChecked = allLines.length > 0 && allLines.every(line =>
+                userLines.some(ul => ul.productionLinesId === line.productionLinesId)
+            );
+
+            html += `
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox"
+                           id="line_all"
+                           onchange="toggleAllLines(this.checked)"
+                           ${allLinesChecked ? 'checked' : ''}>
+                    <label class="form-check-label fw-bold" for="line_all">
+                        <i class="fas fa-check-double"></i> Todas las líneas
+                    </label>
+                </div>
+                <hr>`;
+
+            // Líneas individuales
+            allLines.forEach(line => {
+                const isChecked = userLines.some(ul => ul.productionLinesId === line.productionLinesId);
+                html += `
+                    <div class="form-check mb-2">
+                        <input class="form-check-input production-line" type="checkbox"
+                               id="line_${line.productionLinesId}"
+                               data-line-id="${line.productionLinesId}"
+                               onchange="updateAllLinesCheckbox()"
+                               ${isChecked ? 'checked' : ''}>
+                        <label class="form-check-label" for="line_${line.productionLinesId}">
+                            Línea ${line.lineNumber}
+                        </label>
+                    </div>`;
+            });
+        }
+
+        container.innerHTML = html;
+    }
+
+    // Marcar/desmarcar todas las líneas
+    function toggleAllLines(checked) {
+        document.querySelectorAll('.production-line').forEach(checkbox => {
+            checkbox.checked = checked;
+        });
+    }
+
+    // Actualizar el checkbox "Todas las líneas" según las líneas individuales
+    function updateAllLinesCheckbox() {
+        const allCheckboxes = document.querySelectorAll('.production-line');
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+        const allLinesCheckbox = document.getElementById('line_all');
+        if (allLinesCheckbox) {
+            allLinesCheckbox.checked = allChecked;
+        }
+    }
+
+    // Guardar permisos
+    function savePermissions() {
+        // Validar campos requeridos
+        if (!selectedEmployeeNumber || !selectedModuleId) {
+            Swal.fire('Error', 'Debe seleccionar un usuario y un módulo', 'error');
+            return;
+        }
+
+        // Los módulos con líneas requieren un área específica
+        if (requiresLines && !selectedAreaId) {
+            Swal.fire('Error', 'Debe seleccionar un área para este módulo', 'error');
+            return;
+        }
+
+        const modulePermissions = [];
+        const productionLines = [];
+
+        // Obtener IDs de permisos desde el cache
+        let viewPermissionId = null;
+        let createPermissionId = null;
+
+        allPermissionsCache.forEach(perm => {
+            const permName = perm.name.toLowerCase();
+            if (permName === 'view') {
+                viewPermissionId = perm.permissionId;
+            } else if (permName === 'create') {
+                createPermissionId = perm.permissionId;
+            }
+        });
+
+        console.log('Permission IDs - View:', viewPermissionId, 'Create:', createPermissionId);
+
+        // Recolectar permisos del módulo seleccionados manualmente
+        document.querySelectorAll('.module-permission:checked').forEach(checkbox => {
+            modulePermissions.push({
+                employeeNumber: selectedEmployeeNumber,
+                moduleId: selectedModuleId,
+                permissionId: parseInt(checkbox.dataset.permissionId)
+            });
+        });
+
+        // Si requiere líneas, recolectar líneas de producción
+        if (requiresLines && selectedAreaId) {
+            const selectedLines = document.querySelectorAll('.production-line:checked');
+
+            if (selectedLines.length > 0) {
+                // Si hay líneas seleccionadas, automáticamente agregar permiso Create
+                if (createPermissionId) {
+                    const hasCreatePermission = modulePermissions.some(p => p.permissionId === createPermissionId);
+                    if (!hasCreatePermission) {
+                        modulePermissions.push({
+                            employeeNumber: selectedEmployeeNumber,
+                            moduleId: selectedModuleId,
+                            permissionId: createPermissionId
+                        });
+                        console.log('Create permission added automatically');
+                    }
+                } else {
+                    console.warn('Create permission not found in cache!');
+                }
+            }
+
+            selectedLines.forEach(checkbox => {
+                productionLines.push({
+                    employeeNumber: selectedEmployeeNumber,
+                    moduleId: selectedModuleId,
+                    areaId: selectedAreaId,
+                    productionLinesId: parseInt(checkbox.dataset.lineId)
+                });
+            });
+        }
+
+        console.log('Final permissions to save:', modulePermissions);
+        console.log('Final lines to save:', productionLines);
+
+        const permissionsData = {
+            employeeNumber: selectedEmployeeNumber,
+            moduleId: selectedModuleId,
+            areaId: selectedAreaId,
+            permissions: modulePermissions,
+            lines: productionLines
+        };
+
+        fetch('/api/PanelControl/SaveUserModulePermissions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(permissionsData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire('Éxito', 'Permisos guardados correctamente', 'success')
+                    .then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'Error al guardar permisos', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error', 'Error de conexión', 'error');
+        });
+    }
+
+    // Setup filtros
+    function setupFilters() {
+        // Filtro de búsqueda con debounce
+        let filterTimeout = null;
+        document.getElementById('searchUser').addEventListener('input', function() {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(() => {
+                currentFilters.search = this.value;
+                currentPage = 1; // Resetear a primera página
+                loadUsersPaginated();
+            }, 500);
+        });
+
+        // Filtro de área
+        document.getElementById('filterArea').addEventListener('change', function() {
+            currentFilters.area = this.value;
+            currentPage = 1;
+            loadUsersPaginated();
+        });
+
+        // Filtro de rol
+        document.getElementById('filterRole').addEventListener('change', function() {
+            currentFilters.role = this.value;
+            currentPage = 1;
+            loadUsersPaginated();
+        });
+
+        // Cambio de tamaño de página
+        document.getElementById('pageSizeSelect').addEventListener('change', function() {
+            pageSize = parseInt(this.value);
+            currentPage = 1;
+            loadUsersPaginated();
+        });
+
+        // Evento para búsqueda de usuarios en el datalist
+        const selectUserInput = document.getElementById('selectUserPermissions');
+        selectUserInput.addEventListener('input', function() {
+            searchUsers(this.value);
+        });
+
+        // Evento cuando se selecciona un usuario (change se dispara al perder foco o seleccionar)
+        selectUserInput.addEventListener('change', function() {
+            loadUserModulePermissions();
+        });
+
+        document.getElementById('selectModulePermissions').addEventListener('change', function() {
+            const selectedModule = this.options[this.selectedIndex];
+            const moduleName = selectedModule ? selectedModule.textContent.toLowerCase() : '';
+
+            // Determinar si el módulo requiere área y/o líneas
+            if (moduleName === 'registro de producción' || moduleName === 'registro de produccion') {
+                // Registro de Producción (datos de producción): requiere área Y líneas
+                requiresArea = true;
+                requiresLines = true;
+            } else if (moduleName.includes('defecto')) {
+                // Registro de Defectos: solo requiere área
+                requiresArea = true;
+                requiresLines = false;
+            } else if (moduleName.includes('área') || moduleName.includes('area') ||
+                       moduleName.includes('dashboard') || moduleName.includes('reporte') ||
+                       moduleName.includes('gestión') || moduleName.includes('gestion')) {
+                // Módulos de gestión/visualización: solo requiere área (sin líneas)
+                requiresArea = true;
+                requiresLines = false;
+            } else {
+                // Otros módulos: no requieren ni área ni líneas
+                requiresArea = false;
+                requiresLines = false;
+            }
+
+            console.log('Módulo:', moduleName, 'Área:', requiresArea, 'Líneas:', requiresLines);
+
+            if (requiresArea) {
+                document.getElementById('areaSelectionRow').style.display = 'block';
+                document.getElementById('selectAreaPermissions').value = '';
+                document.getElementById('areaSelectionHelp').textContent = requiresLines
+                    ? 'Este módulo requiere un área específica para cargar sus líneas de producción.'
+                    : 'Puede dejarlo en todas las áreas cuando el permiso aplique de forma general.';
+            } else {
+                document.getElementById('areaSelectionRow').style.display = 'none';
+                document.getElementById('selectAreaPermissions').value = '';
+                selectedAreaId = null;
+            }
+
+            loadUserModulePermissions();
+        });
+        document.getElementById('selectAreaPermissions').addEventListener('change', function() {
+            loadUserModulePermissions();
+        });
+    }
+
+    // Limpiar filtros
+    function clearFilters() {
+        document.getElementById('searchUser').value = '';
+        document.getElementById('filterArea').value = '';
+        document.getElementById('filterRole').value = '';
+        currentFilters = {
+            search: '',
+            area: '',
+            role: ''
+        };
+        currentPage = 1;
+        loadUsersPaginated();
+    }
+
+    function loadAvailablePermissions() {
+        // Esta función se implementará con las APIs correspondientes
+    }
+</script>
+
+<style>
+    .table {
+        margin-top: 20px;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-group .btn {
+        margin: 0 2px;
+    }
+
+    .btn-group .btn-sm {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-success,
+    .btn-danger {
+        color: white !important;
+    }
+
+    .btn-success:hover {
+        background-color: #157347;
+        border-color: #146c43;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #b02a37;
+    }
+
+    .btn-success i,
+    .btn-danger i {
+        font-size: 1rem;
+        color: white;
+    }
+
+    .badge {
+        font-size: 0.8em;
+    }
+
+    .form-check-inline {
+        margin-right: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    #modulePermissions, #productionLines {
+        background-color: #f8f9fa;
+    }
+
+    .modal-xl {
+        max-width: 90%;
+    }
+
+    /* Estilos de paginación */
+    .pagination {
+        margin-bottom: 0;
+    }
+
+    .pagination .page-link {
+        color: #0d6efd;
+        border-color: #dee2e6;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+        font-weight: bold;
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    #paginationInfo {
+        font-size: 0.9rem;
+    }
+
+    .gap-2 {
+        gap: 0.5rem;
+    }
+
+    /* Estilos mejorados para botones de acción */
+    .table .btn-group {
+        display: flex;
+        gap: 0.4rem;
+        justify-content: center;
+    }
+
+    .table .btn-sm {
+        min-width: fit-content;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        border-width: 1.5px;
+        padding: 0.375rem 0.75rem;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+
+    .table .btn-sm i {
+        margin-right: 0.35rem;
+    }
+
+    .table .btn-sm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .table .btn-sm:active {
+        transform: translateY(0);
+    }
+
+    /* Colores sólidos para los botones */
+    .table .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+        color: white;
+    }
+
+    .table .btn-success:hover {
+        background-color: #157347;
+        border-color: #146c43;
+        color: white;
+    }
+
+    .table .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+    }
+
+    .table .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #b02a37;
+        color: white;
+    }
+
+    .table .btn-success:focus,
+    .table .btn-danger:focus {
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.5);
+    }
+
+    .table .btn-danger:focus {
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.5);
+    }
+</style>
+}

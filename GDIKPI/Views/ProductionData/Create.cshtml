@@ -1,0 +1,97 @@
+﻿@model GDIKPI.Models.ProductionDatum
+
+<link rel="stylesheet" href="~/css/forms/production-data/form-create-production.css" asp-append-version="true" />
+
+<div class="container">
+    <form id="createProductionForm">
+        <div class="form-group">
+            <label for="createProductionLine">Línea de Producción</label>
+            <select id="createProductionLine" name="createProductionLine" class="form-control" required>
+                <option value="">Elige una Línea</option>
+                @foreach (var line in ViewBag.ProductionLines as SelectList)
+                {
+                    <option value="@line.Value">@line.Text</option>
+                }
+            </select>
+        </div>
+      
+        <div class="form-group">
+            <label for="ProgramProductionData">Programa</label>
+            <select id="ProgramProductionData" name="ProgramProductionData" class="form-control" required>
+                <option value="">Elige un programa</option>
+                
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="createProductionDate">Fecha de Producción</label>
+            <input type="date" id="createProductionDate" name="createProductionDate" class="form-control" required
+                   value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+        </div>
+
+       
+        <div class="form-group">
+            <label for="createTimeInterval">Intervalo de Hora</label>
+            <select id="createTimeInterval" name="createTimeInterval" class="form-control" required>
+                <option value="">Elige un intervalo</option>
+                @foreach (var interval in ViewBag.Intervals as List<string>)
+                {
+                    <option value="@interval" selected="@(interval == ViewBag.SelectedInterval ? "selected" : null)">
+                        @interval
+                    </option>
+                }
+            </select>
+        </div>
+        <div id="CreateProductionContainer" class="mt-3">
+            <!-- Aquí se cargarán dinámicamente los inputs -->
+        </div>
+
+
+    </form>
+</div>
+<script src="~/js/productionData/createForm.js"></script>
+<script>
+    // Actualizar palomitas cuando cambie la línea o fecha
+    $(document).on('change', '#createProductionLine, #createProductionDate', function () {
+        updateIntervalCheckmarks();
+    });
+
+    async function updateIntervalCheckmarks() {
+        const lineId = $('#createProductionLine').val();
+        const date = $('#createProductionDate').val();
+
+        if (!lineId || !date) {
+            // Si no hay línea o fecha, limpiar todas las palomitas
+            $('#createTimeInterval option').each(function() {
+                if ($(this).val()) {
+                    const interval = $(this).val();
+                    $(this).text(interval).removeClass('has-production');
+                }
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch(`/ProductionData/GetRegisteredIntervalsForLine?lineId=${lineId}&date=${date}`);
+            if (!response.ok) return;
+
+            const intervals = await response.json();
+
+            // Actualizar el select
+            $('#createTimeInterval option').each(function() {
+                const intervalValue = $(this).val();
+                if (intervalValue) {
+                    const hasProduction = intervals.includes(intervalValue);
+                    $(this).text(intervalValue + (hasProduction ? ' ✓' : ''));
+
+                    if (hasProduction) {
+                        $(this).addClass('has-production');
+                    } else {
+                        $(this).removeClass('has-production');
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error al actualizar intervalos:', error);
+        }
+    }
+</script>

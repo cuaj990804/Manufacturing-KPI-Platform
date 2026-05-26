@@ -1,0 +1,94 @@
+﻿@model GDIKPI.Services.ModuleCardsViewModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="row">
+    @* Módulos de Producción *@
+    @if (Model.ProductionCards != null && Model.ProductionCards.Any())
+    {
+        <div class="col-12">
+            <h3><i class="fas fa-industry"></i> Producción</h3>
+        </div>
+        @foreach (var card in Model.ProductionCards)
+        {
+            <div class="col-md-4">
+                <div class="@card.CssClass" style="cursor:pointer"
+                     onclick="location.href='@Url.Action(card.Action, card.Controller, card.RouteValues)'">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="@card.Icon"></i> @card.Title
+                        </h5>
+                        <p class="card-text">@card.Description</p>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @* Módulos de Calidad/Rechazos *@
+    @if (Model.QualityCards != null && Model.QualityCards.Any())
+    {
+        <div class="col-12">
+            <h3><i class="fas fa-exclamation-triangle"></i> Calidad y Rechazos</h3>
+        </div>
+        @foreach (var card in Model.QualityCards)
+        {
+            <div class="col-md-4">
+                <div class="@card.CssClass" style="cursor:pointer"
+                     onclick="location.href='@Url.Action(card.Action, card.Controller, card.RouteValues)'">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="@card.Icon"></i> @card.Title
+                        </h5>
+                        <p class="card-text">@card.Description</p>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @* Módulos de OEE y Dashboards *@
+    @if (Model.OEECards != null && Model.OEECards.Any())
+    {
+        <div class="col-12">
+            <h3><i class="fas fa-chart-line"></i> Dashboards y Reportes</h3>
+        </div>
+        @foreach (var card in Model.OEECards)
+        {
+            <div class="col-md-4">
+                <div class="@card.CssClass" style="cursor:pointer"
+                     onclick="location.href='@Url.Action(card.Action, card.Controller, card.RouteValues)'">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="@card.Icon"></i> @card.Title
+                        </h5>
+                        <p class="card-text">@card.Description</p>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @* Módulos de Administración *@
+    @if (Model.AdminCards != null && Model.AdminCards.Any())
+    {
+        <div class="col-12">
+            <h3><i class="fas fa-cogs"></i> Administración</h3>
+        </div>
+        @foreach (var card in Model.AdminCards)
+        {
+            <div class="col-md-4">
+                <div class="@card.CssClass" style="cursor:pointer"
+                     onclick="location.href='@Url.Action(card.Action, card.Controller, card.RouteValues)'">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="@card.Icon"></i> @card.Title
+                        </h5>
+                        <p class="card-text">@card.Description</p>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

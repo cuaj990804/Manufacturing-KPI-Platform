@@ -1,0 +1,42 @@
+﻿@{
+    ViewData["Title"] = ViewBag.AreaName != null ? $"Dashboard Producción - {ViewBag.AreaName}" : "Dashboard Producción";
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="/css/dashboardproduction/cards.css" asp-append-version="true">
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> @ViewBag.ErrorMessage
+    </div>
+}
+
+
+@* Campo hidden para que JavaScript pueda acceder al areaId *@
+@if (ViewBag.AreaId != null)
+{
+    <input type="hidden" id="area-id-hidden" value="@ViewBag.AreaId" />
+}
+
+<!-- Botón de cerrar sesión oculto -->
+<div class="logout-button-container">
+    <a href="/Account/Logout" class="logout-button" title="Cerrar Sesión">
+        <i class="fas fa-sign-out-alt"></i>
+    </a>
+</div>
+
+<div class="dashboard" id="cards-container">
+    <!-- Las tarjetas se cargan dinámicamente -->
+</div>
+
+
+
+@section Scripts {
+    <script>
+        window.dashboardConfig = {
+            areaId: @(ViewBag.AreaId != null ? ViewBag.AreaId : "null"),
+            areas: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Areas ?? new List<object>()))
+        };
+    </script>
+    <script src="https://unpkg.com/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="~/js/DashboardProduction/dashboard.js"></script>
+}

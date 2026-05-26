@@ -1,0 +1,44 @@
+﻿@model GDIKPI.Models.Eoopercentage
+@{
+    ViewData["Title"] = "Parámetros OEE";
+}
+<form id="AddOEEParamForm">
+    <div class="modal-header">
+        <h5 class="modal-title" id="AddOEEParamModalLabel">Editar Parámetro OEE</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="modal-body">
+        <!-- Métrica -->
+        <div class="mb-3">
+            <label for="metricName" class="form-label">Métrica</label>
+            <select class="form-select" id="metricName" name="MetricName" required>
+                <option value="">Selecciona una métrica...</option>
+                <option value="Availability">Disponibilidad</option>
+                <option value="Performance">Rendimiento</option>
+                <option value="Quality">Calidad</option>
+                <option value="Overall">OEE</option>
+            </select>
+        </div>
+
+        <!-- Categoría -->
+        <div class="mb-3">
+            <label for="category" class="form-label">Categoría</label>
+            <select class="form-select" id="category" name="Category" required>
+                <option value="">Selecciona una categoría...</option>
+                <option value="Excelente">Excelente</option>
+                <option value="Bueno">Bueno</option>
+                <option value="Malo">Malo</option>
+            </select>
+        </div>
+        <div class="mb-3" id="ParametersContainer">
+            
+        </div>
+
+        
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar Parámetro</button>
+    </div>
+</form>

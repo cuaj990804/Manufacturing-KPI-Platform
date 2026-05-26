@@ -1,0 +1,236 @@
+﻿/* Modal Form Styles - Scoped and Reusable */
+.modal-form * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-form h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.modal-form .form-group {
+    margin-bottom: 25px;
+}
+
+    .modal-form .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .modal-form .form-group input,
+    .modal-form .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+
+        .modal-form .form-group input:focus,
+        .modal-form .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-form .form-group input:hover,
+        .modal-form .form-group select:hover {
+            border-color: #c3c9d4;
+        }
+
+.modal-form .time-group {
+    display: flex;
+    gap: 15px;
+}
+
+    .modal-form .time-group .form-group {
+        flex: 1;
+    }
+
+.modal-form .button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.modal-form .btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-form .btn-primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+}
+
+    .modal-form .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+
+.modal-form .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+    .modal-form .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+    }
+
+.modal-form .form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 20px;
+    padding-right: 40px;
+    color: #6c757d;
+}
+
+    .modal-form .form-group select:focus {
+        color: #333;
+    }
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .modal-form h1 {
+        font-size: 20px;
+    }
+
+    .modal-form .time-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .modal-form .button-group {
+        flex-direction: column;
+    }
+}
+
+/* Estados adicionales para mejor UX */
+.modal-form .form-group input[type="number"]::-webkit-outer-spin-button,
+.modal-form .form-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.modal-form .form-group input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* Mejoras visuales */
+.modal-form .form-group input:valid {
+    border-color: #28a745;
+}
+
+.modal-form .form-group input:invalid:not(:placeholder-shown) {
+    border-color: #dc3545;
+}
+
+/* Aplicar borde verde cuando el valor es válido */
+.modal-form select:valid,
+.modal-form input[type="number"]:valid {
+    border-color: #28a745;
+}
+
+/* Aplicar borde rojo cuando es inválido */
+.modal-form select:invalid,
+.modal-form input[type="number"]:invalid {
+    border-color: #dc3545;
+}
+
+/* Indicador visual para campos requeridos */
+.modal-form .form-group label::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Estilo para placeholders */
+.modal-form .form-group input::placeholder {
+    color: #adb5bd;
+    opacity: 1;
+}
+
+/* Animación sutil en hover para los botones */
+.modal-form .btn:active {
+    transform: translateY(0);
+}
+
+/* Mejora la legibilidad en pantallas pequeñas */
+@media (max-width: 480px) {
+    .modal-form .form-group input,
+    .modal-form .form-group select {
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+
+    .modal-form .btn {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+}
+
+/* Estilos específicos para el modal body */
+.modal-form .modal-body {
+    padding: 20px;
+}
+
+/* Asegurar que el modal tenga un ancho adecuado */
+.modal-form .modal-dialog {
+    max-width: 600px;
+}
+
+/* Mejorar el espaciado dentro del modal */
+.modal-form .modal-content {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.modal-form .modal-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: 20px 20px 15px;
+}
+
+.modal-form .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Estilo para intervalos con producción registrada */
+.modal-form select#createTimeInterval option.has-production {
+    color: #28a745;
+    font-weight: 600;
+}

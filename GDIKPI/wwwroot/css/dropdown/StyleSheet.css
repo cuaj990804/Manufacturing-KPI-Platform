@@ -1,0 +1,36 @@
+﻿/* Limitar ancho de los selects y dropdowns */
+.select-drop-down .dropdown-menu,
+.bootstrap-select .dropdown-menu {
+    max-width: 30px; /* ajusta a tu gusto */
+    width: auto !important;
+    top: 100% !important;
+    bottom: auto !important;
+    transform: translate3d(0, 0, 0) !important;
+    overflow-y: auto; /* scroll si hay muchas opciones */
+    max-height: 20px; /* altura máxima del dropdown */
+}
+
+/* Ajuste de z-index para que no quede debajo de otros elementos */
+.alert .form-select,
+.selectpicker {
+    position: relative;
+    z-index: 1050;
+}
+
+/* Estilo general */
+.form-select,
+.selectpicker {
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Opcional: texto alineado a la izquierda */
+select {
+    direction: ltr;
+}
+
+/* Alinear opciones dentro del dropdown */
+option {
+    position: relative;
+}

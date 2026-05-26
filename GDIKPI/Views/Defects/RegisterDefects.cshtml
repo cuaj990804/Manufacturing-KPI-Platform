@@ -1,0 +1,633 @@
+﻿
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+        /* Optimizaciones para tablet */
+        body {
+            font-size: 16px;
+            line-height: 1.6;
+           
+            min-height: 100vh;
+            padding: 0; /* antes era 10px */
+            margin: 0;
+        }
+
+        .container {
+            max-width: 90vw;
+            margin: 0 auto;
+        }
+
+        .card {
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+            border-radius: 20px 20px 0 0 !important;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            position: relative;
+        }
+
+        .header-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            height: auto;
+        }
+
+        .header-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        /* Selectores más grandes para táctil */
+        .form-select {
+            height: 60px;
+            font-size: 18px;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            background-size: 20px;
+            padding: 15px 20px;
+            transition: all 0.3s ease;
+        }
+
+        .form-select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .form-select:hover {
+            border-color: #3498db;
+            transform: translateY(-1px);
+        }
+
+        /* Alertas mejoradas */
+        .alert {
+            border-radius: 15px;
+            padding: 20px 25px;
+            border: none;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: currentColor;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d1edff 0%, #a8e6cf 100%);
+            color: #155724;
+        }
+
+        .alert-secondary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #495057;
+        }
+
+        /* Labels más prominentes */
+        .form-label {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: block;
+            color: #2c3e50;
+        }
+
+        .form-label i {
+            font-size: 24px;
+            vertical-align: middle;
+        }
+
+        /* Defect container optimizado */
+        .defect-item {
+            transition: all 0.3s ease;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: white;
+            border: 2px solid #e9ecef;
+            position: relative;
+        }
+
+        .defect-item:hover {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+
+        .defect-list {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* Scroll personalizado */
+        .defect-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .defect-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .defect-list::-webkit-scrollbar-thumb {
+            background: #3498db;
+            border-radius: 10px;
+        }
+
+        .defect-list::-webkit-scrollbar-thumb:hover {
+            background: #2980b9;
+        }
+
+        /* Input de cantidad más grande */
+        .quantity-input {
+            width: 100px;
+            height: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .quantity-input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+
+        /* Badges más grandes */
+        .category-badge {
+            font-size: 14px;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-weight: 500;
+        }
+
+        /* Summary card mejorada */
+        .summary-card {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffeaa7;
+            border-radius: 20px;
+            padding: 25px;
+            margin-top: 30px;
+            position: sticky;
+            bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        /* Botones más grandes para tablet */
+        .btn {
+            height: 55px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 15px;
+            padding: 15px 30px;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments */
+        media (min-width: 768px) and (max-width: 1024px) {
+            .container {
+                max-width: 95vw;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .col-lg-10 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+            
+            .defect-list {
+                max-height: 40vh;
+            }
+        }
+
+        media (orientation: landscape) and (max-height: 768px) {
+            .card-header {
+                padding: 20px;
+            }
+            
+            .card-title {
+                font-size: 1.5rem;
+            }
+            
+            .defect-list {
+                max-height: 35vh;
+            }
+        }
+
+        /* Touch feedback */
+        .form-select:active,
+        .btn:active,
+        .defect-item:active {
+            transform: scale(0.98);
+        }
+
+        /* Icon improvements */
+        .bi {
+            font-size: 1.2em;
+            color: #3498db;
+        }
+
+        /* Status indicators */
+        .status-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #95a5a6;
+        }
+
+        .status-indicator.active {
+            background: #2ecc71;
+        }
+
+        .status-indicator.error {
+            background: #e74c3c;
+        }
+    </style>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <div class="card-header-content">
+                        <h1 class="card-title mb-0">
+                             Registro de Defectos en Producción
+                        </h1>
+                        <button type="button" class="btn header-button" data-bs-toggle="modal" data-bs-target="#defectsModal">
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                    </div>
+                    <p class="card-text mb-0 mt-2 opacity-75">
+                        Complete el formulario para registrar los defectos encontrados en los volantes
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="alert alert-warning">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-gear me-2"></i> Línea de Producción *
+                            </label>
+                            <select id="lineProduction" name="lineProduction" class="form-select" required>
+                                <option value="">Elige una línea</option>
+                                @if (ViewBag.ProductionLines is SelectList productionLines)
+                                {
+                                    foreach (var line in productionLines)
+                                    {
+                                        <option value="@line.Value">@line.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="alert alert-success">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-diagram-3 me-2"></i> Programa *
+                            </label>
+                            <select id="programSelect" name="programSelect" class="form-select" required>
+                                <option value="">Elige un programa</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="alert alert-secondary">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-clock me-2"></i> Intervalo de Hora *
+                            </label>
+                            <select id="timeInterval" name="timeInterval" class="form-select" required>
+                                <option value="">Elige un intervalo</option>
+
+                                @foreach (var interval in ViewBag.Intervals as List<string>)
+                                {
+                                    <option value="@interval" selected="@(interval == ViewBag.SelectedInterval ? "selected" : null)">
+                                        @interval
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                   
+
+                    <div id="defectContainer" class="mt-3"></div>
+                    <input type="hidden" id="areaId" value="@ViewBag.AreaId" />
+                   
+                    
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar nuevo defecto -->
+<div class="modal fade" id="defectsModal" tabindex="-1" aria-labelledby="defectsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="defectsModalLabel">3
+                     Agregar Nuevo Defecto
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addDefectForm">
+                    <div class="mb-4">
+                        <label for="defectCategory" class="form-label fw-bold">
+                             Categoría *
+                        </label>
+                        <select id="defectCategory" name="defectCategory" class="form-select" required>
+                            <option value="">Seleccione una categoría</option>
+                        </select>
+                    </div>
+                    <div class="mb-4" id="customCategoryContainer" style="display: none;">
+                        <label for="customCategoryName" class="form-label fw-bold">
+                            <i class="bi bi-pencil me-2"></i> Nueva Categoría *
+                        </label>
+                        <input type="text" id="customCategoryName" name="customCategoryName" class="form-control"
+                               placeholder="Escriba el nombre de la nueva categoría"
+                               style="height: 60px; font-size: 18px; border-radius: 15px; border: 2px solid #e9ecef; padding: 15px 20px;">
+                    </div>
+                    <div class="mb-4">
+                        <label for="defectName" class="form-label fw-bold">
+                             Nombre del Defecto *
+                        </label>
+                        <input type="text" id="defectName" name="defectName" class="form-control"
+                               placeholder="Escriba el nombre del defecto" required
+                               style="height: 60px; font-size: 18px; border-radius: 15px; border: 2px solid #e9ecef; padding: 15px 20px;">
+                    </div>
+                    <input type="hidden" id="modalAreaId" value="@ViewBag.AreaId" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="saveDefectBtn">
+                    <i class="bi bi-save me-2"></i> Guardar Defecto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const areaId = @ViewBag.AreaId;
+    </script>
+    <script src="~/js/Defects/RegisterDefects.js"></script>
+    <script src="~/js/utils/alerts.js"></script>
+
+    <script>
+        // Cargar categorías cuando se abre el modal
+        $('#defectsModal').on('show.bs.modal', async function () {
+            await loadDefectCategories();
+        });
+
+        // Limpiar formulario cuando se cierra el modal
+        $('#defectsModal').on('hidden.bs.modal', function () {
+            $('#addDefectForm')[0].reset();
+            $('#customCategoryContainer').hide();
+            $('#customCategoryName').prop('required', false);
+        });
+
+        // Cargar categorías de defectos
+        async function loadDefectCategories() {
+            try {
+                const response = await fetch('/Defects/GetDefectCategories');
+                if (!response.ok) throw new Error('Error al cargar categorías');
+
+                const categories = await response.json();
+                const select = $('#defectCategory');
+
+                select.empty();
+                select.append('<option value="">Seleccione una categoría</option>');
+
+                categories.forEach(category => {
+                    select.append(`<option value="${category.defectCategoryId}" data-name="${category.defectCategoryName}">${category.defectCategoryName}</option>`);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar las categorías de defectos');
+            }
+        }
+
+        // Mostrar/ocultar campo de nueva categoría cuando se selecciona "Otros"
+        $('#defectCategory').on('change', function () {
+            const selectedOption = $(this).find('option:selected');
+            const categoryName = selectedOption.data('name');
+
+            if (categoryName && categoryName.toLowerCase() === 'otros') {
+                $('#customCategoryContainer').show();
+                $('#customCategoryName').prop('required', true);
+            } else {
+                $('#customCategoryContainer').hide();
+                $('#customCategoryName').prop('required', false).val('');
+            }
+        });
+
+        // Guardar nuevo defecto
+        $('#saveDefectBtn').on('click', async function () {
+            const form = $('#addDefectForm')[0];
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const selectedOption = $('#defectCategory').find('option:selected');
+            const categoryName = selectedOption.data('name');
+            const customCategoryName = $('#customCategoryName').val();
+
+            // Si se seleccionó "Otros" y se escribió una nueva categoría
+            const isOtros = categoryName && categoryName.toLowerCase() === 'otros';
+
+            const defectData = {
+                DefectName: $('#defectName').val(),
+                AreaId: parseInt($('#modalAreaId').val()),
+                DefectCategoryId: parseInt($('#defectCategory').val()),
+                CustomCategoryName: isOtros ? customCategoryName : null
+            };
+
+            try {
+                $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i> Guardando...');
+
+                const response = await fetch('/Defects/CreateDefect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(defectData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Error al guardar el defecto');
+                }
+
+                const result = await response.json();
+
+                // Cerrar modal
+                $('#defectsModal').modal('hide');
+
+                // Mostrar mensaje de éxito
+                alert('¡Defecto agregado exitosamente!');
+
+                // Limpiar formulario
+                $('#addDefectForm')[0].reset();
+                $('#customCategoryContainer').hide();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                $(this).prop('disabled', false).html('<i class="bi bi-save me-2"></i> Guardar Defecto');
+            }
+        });
+
+        // Actualizar palomitas cuando cambie la línea
+        $(document).on('change', '#lineProduction', function () {
+            updateDefectIntervalCheckmarks();
+        });
+
+        async function updateDefectIntervalCheckmarks() {
+            const lineId = $('#lineProduction').val();
+            const date = new Date().toISOString().split('T')[0]; // Fecha de hoy
+
+            if (!lineId) {
+                // Si no hay línea, limpiar todas las palomitas
+                $('#timeInterval option').each(function() {
+                    if ($(this).val()) {
+                        const interval = $(this).val();
+                        $(this).text(interval).css('color', '').css('font-weight', '');
+                    }
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch(`/Defects/GetRegisteredDefectIntervalsForLine?lineId=${lineId}&date=${date}`);
+                if (!response.ok) return;
+
+                const intervals = await response.json();
+
+                // Actualizar el select
+                $('#timeInterval option').each(function() {
+                    const intervalValue = $(this).val();
+                    if (intervalValue) {
+                        const hasDefects = intervals.includes(intervalValue);
+                        $(this).text(intervalValue + (hasDefects ? ' ✓' : ''));
+
+                        if (hasDefects) {
+                            $(this).css({
+                                'color': '#28a745',
+                                'font-weight': '600'
+                            });
+                        } else {
+                            $(this).css({
+                                'color': '',
+                                'font-weight': ''
+                            });
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error al actualizar intervalos:', error);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,26 @@
+﻿@model GDIKPI.Models.ProductionDatum
+
+<div class="container">
+    <form id="registerDownTimeForm" method="post" action="/ProductionData/RegisterDownTime">
+        <input type="hidden" name="AreaId" value="@ViewBag.AreaId" />
+
+        <div class="mb-3">
+            <label for="DownTimeeProductionLine" class="form-label">Línea de Producción</label>
+            <select id="DownTimeeProductionLine" name="ProductionLinesId" class="form-select" required>
+                <option value="">Elige una Línea</option>
+                @foreach (var line in ViewBag.ProductionLines as SelectList)
+                {
+                    <option value="@line.Value">@line.Text</option>
+                }
+            </select>
+        </div>
+        <div id="openStatusFields" class="mt-3"></div>
+
+        
+
+       
+    </form>
+</div>
+
+
+

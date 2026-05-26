@@ -1,0 +1,359 @@
+﻿@model IEnumerable<GDIKPI.Models.Area>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<link rel="stylesheet" href="/css/tables/tables.css" asp-append-version="true">
+<style>
+    .time-grid {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+</style>
+
+<div id="table-container">
+    <table class="table" id="DataTable">
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Área</th>
+                <th>Línea</th>
+                <th>Meta Diaria</th>
+                <th>Cantidad Personal</th>
+                <th>Descanso 1</th>
+                <th>Descanso 2</th>
+                <th>Supervisor</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        </tbody>
+    </table>
+
+</div>
+
+<div class="modal fade" id="ProductionLinesModal" tabindex="-1" aria-labelledby="ProductionLinesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ProductionLinesModalLabel">Nueva Línea de Producción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="LineProductionForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="area" class="form-label">Área de Producción</label>
+                            <select id="area" name="area" class="form-select" required>
+                                <option value="">Seleccionar área...</option>
+                                @if (ViewBag.Areaslist is SelectList areaList)
+                                {
+                                    foreach (var area in areaList)
+                                    {
+                                        <option value="@area.Value">@area.Text</option>
+                                    }
+                                }
+                                <option value="add-new" class="add-new-option">➕ Agregar una nueva área...</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="createlineNumber" class="form-label">Número de Línea</label>
+                            <input type="number" id="createlineNumber" name="createlineNumber" class="form-control" required min="1" placeholder="Ej: 1, 2, 3..." />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="lineName" class="form-label">Nombre/Alias de Línea (opcional)</label>
+                            <input type="text" id="lineName" name="lineName" class="form-control" placeholder="Ej: metmel, área especial..." maxlength="100" />
+                            <small class="text-muted">Si se especifica, se mostrará este nombre en lugar de "LÍNEA X"</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="peopleqty" class="form-label">Cantidad de Personas</label>
+                            <input type="number" id="peopleqty" name="peopleqty" class="form-control" placeholder="Número de operadores" min="1" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="dailyGoal" class="form-label">Meta Diaria</label>
+                            <input type="number" id="dailyGoal" name="dailyGoal" class="form-control" placeholder="Meta por día" min="1" required>
+                        </div>
+                    </div>
+
+                    <!-- Nueva sección: Supervisor -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="supervisor" class="form-label">Supervisor Asignado</label>
+                            <select id="supervisor" name="supervisor" class="form-select" required>
+                                <option value="">Seleccionar supervisor...</option>
+                                @if (ViewBag.SupervisorsList is SelectList supervisorList)
+                                {
+                                    foreach (var supervisor in supervisorList)
+                                    {
+                                        <option value="@supervisor.Value">@supervisor.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Nueva sección: Permisos del Supervisor -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Permisos del Supervisor</label>
+                        <div class="permissions-grid p-3 border rounded bg-light">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="permission_create" name="permissions" value="2">
+                                        <label class="form-check-label" for="permission_create">
+                                            <i class="fas fa-plus-circle text-success me-1"></i>
+                                            Crear
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="permission_update" name="permissions" value="3">
+                                        <label class="form-check-label" for="permission_update">
+                                   
+                                            Actualizar
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="permission_delete" name="permissions" value="4">
+                                        <label class="form-check-label" for="permission_delete">
+                                            
+                                            Eliminar
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                            
+                                    Selecciona los permisos que tendrá el supervisor en esta línea de producción.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Horarios de Descanso</label>
+                        <div class="time-grid p-3 border rounded">
+                            <!-- Primer Descanso -->
+                            <div class="mb-3">
+                                <h6 class="mb-2">Primer Descanso</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label for="break1Start" class="form-label small">Inicio</label>
+                                        <input type="time" id="break1Start" name="break1Start" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label for="break1End" class="form-label small">Fin</label>
+                                        <input type="time" id="break1End" name="break1End" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Segundo Descanso -->
+                            <div class="mb-3">
+                                <h6 class="mb-2">Segundo Descanso</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label for="break2Start" class="form-label small">Inicio</label>
+                                        <input type="time" id="break2Start" name="break2Start" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label for="break2End" class="form-label small">Fin</label>
+                                        <input type="time" id="break2End" name="break2End" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="LineProductionForm" class="btn btn-primary">Guardar Línea</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal para Agregar Nueva Área -->
+<div class="modal fade" id="AddAreaModal" tabindex="-1" aria-labelledby="AddAreaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="AddAreaForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="AddAreaModalLabel">Agregar Nueva Área</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="areaName" class="form-label">Nombre del Área</label>
+                        <select class="form-select" id="areaName" name="areaName" required>
+                            <option value="">Selecciona un área...</option>
+                            <option value="Preparacion de piel">Preparación de piel</option>
+                            <option value="Forrado">Forrado</option>
+                            <option value="Back cover">Back cover</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="customerName" class="form-label">Cliente</label>
+                        <input type="text" class="form-control" id="customerName" name="customerName" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Área</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar Línea de Producción -->
+
+<div class="modal fade" id="EditProductionLineModal" tabindex="-1" aria-labelledby="EditProductionLineModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="EditProductionLineModalLabel">Editar Línea de Producción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body" id="EditProductionLineModalBody">
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="EditLineProductionForm" class="btn btn-primary">
+                   Actualizar Línea
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar area de Producción -->
+
+<div class="modal fade" id="editAreaModal" tabindex="-1" aria-labelledby="editAreaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Area de Producción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body" id="editAreaModalBody">
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Modal de Confirmación para filtrar -->
+<div class="modal fade" id="filterAreaModal" tabindex="-1" aria-labelledby="filterAreaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form id="filterAreaForm" method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterAreaModalLabel">Filtrar Líneas de Producción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label>Cliente</label>
+                            <select class="form-control" name="customerNameFilter">
+                                <option value="">Seleccionar cliente...</option>
+                                @if (ViewBag.CustomersListFilter is SelectList customerList)
+                                {
+                                    foreach (var customer in customerList)
+                                    {
+                                        <option value="@customer.Value">@customer.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Área</label>
+                            <select class="form-control" name="areaNameFilter">
+                                <option value="">Seleccionar cliente...</option>
+                                @if (ViewBag.AreaListFilter is SelectList areaNameFilter)
+                                {
+                                    foreach (var areafilter in areaNameFilter)
+                                    {
+                                        <option value="@areafilter.Value">@areafilter.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Línea</label>
+                            <input type="text" class="form-control" name="lineNumber" />
+                        </div>
+                        <div class="col-md-6">
+                            <label>Meta Diaria</label>
+                            <input type="number" class="form-control" name="dailyGoal" />
+                        </div>
+                        <div class="col-md-6">
+                            <label>Cantidad Personal</label>
+                            <input type="number" class="form-control" name="staffCount" />
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label>Supervisor</label>
+                    
+
+                            <select id="supervisor" name="supervisorFilter" class="form-select">
+                                <option value="">Seleccionar supervisor...</option>
+                                @if (ViewBag.SupervisorsList is SelectList supervisorList)
+                                {
+                                    foreach (var supervisor in supervisorList)
+                                    {
+                                        <option value="@supervisor.Value">@supervisor.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="ClearFilter">Limpiar</button>
+                    <button type="submit" class="btn btn-primary">Aplicar Filtro</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+
+
+
+
+@section Scripts {
+
+ 
+    <script src="~/js/Areas/list.js"></script>
+    <script src="~/js/Areas/createForm.js"></script>
+    <script src="~/js/utils/clearForm.js"></script>
+  
+  
+
+}

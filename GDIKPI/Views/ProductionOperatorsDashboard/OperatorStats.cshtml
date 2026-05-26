@@ -1,0 +1,375 @@
+﻿@{
+    Layout = null;
+    var groups = ViewBag.Groups as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero Producción</title>
+    <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+        
+            html, body {
+                height: 100%;
+                overflow-x: hidden;
+                overflow-y: auto;
+                background: #000;
+                font-family: Arial, sans-serif;
+            }
+
+            #groupsRow {
+                display: grid;
+                gap: 1.5rem;
+                padding: 1.5rem;
+                min-height: 100vh;
+                align-content: start;
+            }
+
+            /* SAFE AREA para evitar overscan en TVs */
+            media screen and (min-width: 1280px) {
+                #groupsRow {
+                    padding: 2.5%;
+                }
+            }
+
+            /* Si hay varios grupos */
+            #groupsRow.multi-group {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+
+            /* Si hay UN solo grupo */
+            #groupsRow.single-group {
+                grid-template-columns: 1fr;
+                align-content: center;
+            }
+
+            .group {
+                background: #1a1a1a;
+                border: 3px solid #333;
+                border-radius: 6px;
+                padding: 0.8rem;
+            }
+
+            .group-title {
+                font-weight: 900;
+                color: #fff;
+                text-transform: uppercase;
+                text-align: center;
+                font-size: clamp(1.2rem, 3vw, 2rem);
+                padding: 0.5rem;
+                background: #2563eb;
+                border-radius: 4px;
+                margin-bottom: 0.8rem;
+                letter-spacing: 0.05em;
+            }
+
+            .operators-grid {
+                display: grid;
+                gap: 0.5rem;
+            }
+
+            .line {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                align-items: center;
+                gap: 1rem;
+                padding: 0.6rem 1rem;
+                background: #2a2a2a;
+                border-radius: 4px;
+                border-left: 8px solid #666;
+            }
+
+            .line .name {
+                font-weight: 600;
+                color: #fff;
+                font-size: clamp(0.8rem, 2vw, 1.2rem);
+                text-transform: uppercase;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .line .ratio {
+                font-weight: 900;
+                font-size: clamp(1.5rem, 4vw, 3rem);
+                letter-spacing: 0.05em;
+                white-space: nowrap;
+                text-align: right;
+                min-width: fit-content;
+            }
+
+            /* SEMÁFORO DE COLORES */
+            .line.green {
+                border-left-color: #22c55e;
+                background: linear-gradient(90deg, rgba(34, 197, 94, 0.2) 0%, #2a2a2a 100%);
+            }
+            .line.green .ratio {
+                color: #22c55e;
+            }
+
+            .line.yellow {
+                border-left-color: #eab308;
+                background: linear-gradient(90deg, rgba(234, 179, 8, 0.2) 0%, #2a2a2a 100%);
+            }
+            .line.yellow .ratio {
+                color: #eab308;
+            }
+
+            .line.red {
+                border-left-color: #ef4444;
+                background: linear-gradient(90deg, rgba(239, 68, 68, 0.2) 0%, #2a2a2a 100%);
+            }
+            .line.red .ratio {
+                color: #ef4444;
+            }
+
+            .no-data {
+                color: #666;
+                text-align: center;
+                font-size: 3rem;
+                margin-top: 20%;
+                font-weight: 900;
+            }
+
+            /* ============================================
+               OPTIMIZACIONES PARA TVs
+               ============================================ */
+
+            /* TV 1080p (Full HD) - La más común */
+            media screen and (min-width: 1920px) and (min-height: 1080px) {
+                .line {
+                    border-left-width: 10px;
+                }
+                .line .name {
+                    font-size: clamp(1.2rem, 2.2vw, 1.8rem);
+                }
+                .line .ratio {
+                    font-size: clamp(2rem, 4.5vw, 4rem);
+                }
+            }
+
+            /* TV 4K (Ultra HD) */
+            media screen and (min-width: 3840px) and (min-height: 2160px) {
+                #groupsRow {
+                    gap: 3rem;
+                    padding: 3%;
+                }
+                .group {
+                    border: 5px solid #333;
+                    border-radius: 12px;
+                    padding: 2rem;
+                }
+                .group-title {
+                    font-size: clamp(2.5rem, 4vw, 5rem);
+                    padding: 1.5rem;
+                    margin-bottom: 2rem;
+                    border-radius: 8px;
+                }
+                .line {
+                    padding: 2rem 3rem;
+                    border-left-width: 20px;
+                    border-radius: 8px;
+                }
+                .line .name {
+                    font-size: clamp(2.5rem, 3vw, 4rem);
+                }
+                .line .ratio {
+                    font-size: clamp(4rem, 6vw, 8rem);
+                }
+            }
+
+            /* TV HD Ready (1366x768) - TVs más viejas */
+            media screen and (max-width: 1366px) and (max-height: 768px) {
+                .line .name {
+                    font-size: clamp(0.9rem, 2vw, 1.1rem);
+                }
+                .line .ratio {
+                    font-size: clamp(1.8rem, 4vw, 2.5rem);
+                }
+            }
+    </style>
+</head>
+<body>
+
+    @if (!groups.Any())
+    {
+        <div class="no-data">SIN DATOS</div>
+    }
+    else
+    {
+        <div id="groupsRow">
+            @foreach (var group in groups)
+            {
+                <div class="group">
+                    <div class="group-title">@group.Operation</div>
+                    <div class="operators-grid">
+                        @foreach (var item in group.Operators)
+                        {
+                            var count = (int)item.ScanCount;
+                            var goal = (int?)item.Goal ?? 1;
+                            var fullName = ((string)item.FullName).Trim();
+                            var percentage = (count * 100.0 / goal);
+                
+                            var statusClass = "red";
+                            if (percentage >= 100) statusClass = "green";
+                            else if (percentage >= 75) statusClass = "yellow";
+                
+                            <div class="line @statusClass">
+                                <span class="name">@fullName</span>
+                                <span class="ratio">@count/@goal</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <script>
+            (function() {
+                var row = document.getElementById('groupsRow');
+                if (!row) return;
+    
+                var groups = row.querySelectorAll('.group');
+                var groupCount = groups.length;
+
+                // Ordenar por color: verde, amarillo, rojo
+                groups.forEach(function(g) {
+                    var grid = g.querySelector('.operators-grid');
+                    var lines = Array.from(grid.querySelectorAll('.line'));
+                    var colorOrder = { green: 0, yellow: 1, red: 2 };
+                    lines.sort(function(a, b) {
+                        var ca = colorOrder[a.classList.contains('green') ? 'green' : a.classList.contains('yellow') ? 'yellow' : 'red'];
+                        var cb = colorOrder[b.classList.contains('green') ? 'green' : b.classList.contains('yellow') ? 'yellow' : 'red'];
+                        return ca - cb;
+                    });
+                    lines.forEach(function(line) { grid.appendChild(line); });
+                });
+    
+                // Detectar resolución de pantalla
+                var screenWidth = window.innerWidth;
+                var screenHeight = window.innerHeight;
+                var is4K = screenWidth >= 3840;
+                var is1080p = screenWidth >= 1920 && !is4K;
+    
+                console.log('Resolución detectada: ' + screenWidth + 'x' + screenHeight);
+    
+                // Detectar si es un solo grupo
+                if (groupCount === 1) {
+                    row.classList.add('single-group');
+        
+                    var group = groups[0];
+                    var operatorsGrid = group.querySelector('.operators-grid');
+                    var lines = operatorsGrid.querySelectorAll('.line');
+                    var lineCount = lines.length;
+        
+                    if (lineCount === 0) return;
+        
+                    // Calcular número óptimo de columnas basado en el número de operadores y resolución
+                    var columns = 1;
+        
+                    if (is4K) {
+                        // 4K: más columnas por el espacio extra
+                        if (lineCount > 30) columns = 4;
+                        else if (lineCount > 20) columns = 3;
+                        else if (lineCount > 10) columns = 2;
+                    } else if (is1080p) {
+                        // 1080p: configuración estándar
+                        if (lineCount > 20) columns = 3;
+                        else if (lineCount > 10) columns = 2;
+                    } else {
+                        // HD Ready o menor
+                        if (lineCount > 15) columns = 2;
+                    }
+        
+                    // Aplicar columnas
+                    operatorsGrid.style.gridTemplateColumns = 'repeat(' + columns + ', 1fr)';
+        
+                    // Calcular espacio disponible (con safe area para TVs)
+                    var titleHeight = group.querySelector('.group-title').offsetHeight;
+                    var safeMargin = is4K ? 120 : (is1080p ? 80 : 60);
+                    var availableHeight = screenHeight - titleHeight - safeMargin;
+        
+                    // Calcular líneas por columna
+                    var linesPerColumn = Math.ceil(lineCount / columns);
+        
+                    // Calcular altura ideal por línea
+                    var targetLineHeight = Math.floor(availableHeight / linesPerColumn);
+        
+                    // Límites razonables según resolución
+                    var minHeight = is4K ? 80 : (is1080p ? 40 : 35);
+                    var maxHeight = is4K ? 200 : (is1080p ? 130 : 100);
+                    targetLineHeight = Math.max(minHeight, Math.min(targetLineHeight, maxHeight));
+        
+                    // Calcular font sizes basados en altura de línea
+                    var nameFontSize = Math.floor(targetLineHeight * 0.35);
+                    var ratioFontSize = Math.floor(targetLineHeight * 0.55);
+                    var titleFontSize = Math.floor(targetLineHeight * 0.6);
+        
+                    // Limitar tamaños máximos según resolución
+                    var maxNameSize = is4K ? 80 : (is1080p ? 40 : 28);
+                    var maxRatioSize = is4K ? 150 : (is1080p ? 80 : 65);
+                    var maxTitleSize = is4K ? 100 : (is1080p ? 60 : 50);
+        
+                    nameFontSize = Math.min(nameFontSize, maxNameSize);
+                    ratioFontSize = Math.min(ratioFontSize, maxRatioSize);
+                    titleFontSize = Math.min(titleFontSize, maxTitleSize);
+        
+                    // Aplicar tamaños
+                    group.querySelector('.group-title').style.fontSize = titleFontSize + 'px';
+        
+                    lines.forEach(function(line) {
+                        line.style.padding = (targetLineHeight * 0.15) + 'px ' + (targetLineHeight * 0.2) + 'px';
+                        line.style.borderLeftWidth = Math.max(is4K ? 12 : 6, targetLineHeight * 0.08) + 'px';
+            
+                        var nameEl = line.querySelector('.name');
+                        var ratioEl = line.querySelector('.ratio');
+            
+                        nameEl.style.fontSize = nameFontSize + 'px';
+                        ratioEl.style.fontSize = ratioFontSize + 'px';
+                    });
+        
+                    // Ajustar gap del grid
+                    var gapSize = is4K ? (targetLineHeight * 0.15) : (targetLineHeight * 0.12);
+                    operatorsGrid.style.gap = gapSize + 'px';
+        
+                    console.log('Configuración aplicada:');
+                    console.log('- Columnas: ' + columns);
+                    console.log('- Líneas por columna: ' + linesPerColumn);
+                    console.log('- Altura por línea: ' + targetLineHeight + 'px');
+                    console.log('- Tamaño nombre: ' + nameFontSize + 'px');
+                    console.log('- Tamaño ratio: ' + ratioFontSize + 'px');
+        
+                } else {
+                    // Múltiples grupos
+                    row.classList.add('multi-group');
+        
+                    var maxLinesInGroup = 0;
+                    groups.forEach(function(g) {
+                        var lines = g.querySelectorAll('.line').length;
+                        if (lines > maxLinesInGroup) maxLinesInGroup = lines;
+                    });
+        
+                    if (maxLinesInGroup > 15) {
+                        row.querySelectorAll('.line').forEach(function(l) {
+                            l.style.padding = '0.3rem 0.6rem';
+                        });
+                        row.querySelectorAll('.name').forEach(function(n) {
+                            n.style.fontSize = 'clamp(0.7rem, 1.5vw, 1rem)';
+                        });
+                        row.querySelectorAll('.ratio').forEach(function(r) {
+                            r.style.fontSize = 'clamp(1.2rem, 3vw, 2rem)';
+                        });
+                    }
+                }
+            })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+﻿@model GDIKPI.Models.ProductionDatum
+<link rel="stylesheet" href="~/css/forms/production-data/form-create-production.css" asp-append-version="true" />
+
+<div class="container">
+    <form id="editProductionForm">
+        <input type="hidden" id="editProductionId" value="@Model.ProductionId" />
+        <input type="hidden" id="editProgramId" value="@Model.ProgramId" />
+        <input type="hidden" id="editProgramDescription" value="@Model.ProgramDescription" />
+
+        <div class="form-group">
+            <label for="editProductionLine">Línea de Producción</label>
+            <select id="editProductionLine" class="form-control" required>
+                <option value="">Elige una Línea</option>
+                @foreach (var line in ViewBag.ProductionLines as SelectList)
+                {
+                    if (line.Selected)
+                    {
+                        <option value="@line.Value" selected>@line.Text</option>
+                    }
+                    else
+                    {
+                        <option value="@line.Value">@line.Text</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="editProductionDate">Fecha de Producción</label>
+            <input type="date" id="editProductionDate" class="form-control" required
+                   value="@Model.ProductionDate.ToString("yyyy-MM-dd")" />
+        </div>
+
+        <div class="form-group">
+            <label for="editTimeInterval">Intervalo de Hora</label>
+            <select id="editTimeInterval" class="form-control" required>
+                <option value="">Elige un intervalo</option>
+                @foreach (var interval in ViewBag.Intervals as List<string>)
+                {
+                    if (interval == ViewBag.SelectedInterval)
+                    {
+                        <option value="@interval" selected>@interval</option>
+                    }
+                    else
+                    {
+                        <option value="@interval">@interval</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="editProducedPieces">Piezas Producidas</label>
+            <input type="number" id="editProducedPieces" class="form-control" min="0"
+                   value="@(Model.ProducedPieces?.ToString() ?? "")" />
+        </div>
+
+      
+
+        <div class="button-group">
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+    </form>
+</div>

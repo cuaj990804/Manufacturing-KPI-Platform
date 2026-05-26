@@ -1,0 +1,102 @@
+﻿@model GDIKPI.Models.Area
+<form id="editAreaForm">
+        <div class="mb-3">
+            <label for="AreaId" class="form-label">Área de Producción</label>
+            <select asp-for="AreaId" id="AreaIdSelect" class="form-select" required>
+                <option value="">Seleccionar área...</option>
+                @if (ViewBag.Areaslist is SelectList areaList)
+                {
+                    foreach (var area in areaList)
+                    {
+                        <option value="@area.Value">@area.Text</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div id="areaInfoContainer" class="mt-3">
+            <!-- Aquí se cargarán dinámicamente los inputs -->
+        </div>
+
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Actualizar Línea</button>
+    </div>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    $(document).ready(function () {
+        // Cuando cambia el área seleccionada
+        $('#AreaIdSelect').on('change', function () {
+            const areaId = $(this).val();
+
+            if (!areaId) {
+                $('#areaInfoContainer').empty();
+                return;
+            }
+
+            $.ajax({
+                url: `/api/AreaApi/GetAreaDetails?areaId=${areaId}`,
+                method: 'GET',
+                success: function (data) {
+                    $('#areaInfoContainer').html(`
+                        <input type="hidden" name="AreaId" value="${data.areaId}" />
+
+                        <div class="mb-3">
+                            <label for="AreaName" class="form-label">Nombre del Área</label>
+                            <select class="form-select" id="AreaName" name="AreaName" required>
+                                <option value="">Selecciona un área...</option>
+                                <option value="Preparacion de piel" ${data.areaName === 'Preparacion de piel' ? 'selected' : ''}>Preparación de piel</option>
+                                <option value="Forrado" ${data.areaName === 'Forrado' ? 'selected' : ''}>Forrado</option>
+                                <option value="Back cover" ${data.areaName === 'Back cover' ? 'selected' : ''}>Back cover</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="CustomerName" class="form-label">Cliente</label>
+                            <input type="text" class="form-control" name="CustomerName" value="${data.customerName}" required />
+                        </div>
+                    `);
+                },
+                error: function () {
+                    $('#areaInfoContainer').html('<div class="text-danger">No se pudo cargar la información del área.</div>');
+                }
+            });
+        });
+
+        // Cuando se envía el formulario completo del modal
+        $('#editAreaForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const formData = $(this).serialize();
+
+            $.ajax({
+                url: '/api/AreaApi/UpdateArea',
+                method: 'POST',
+                data: formData,
+                success: function (response) {
+                    Swal.fire({
+                        title: 'Éxito',
+                        text: response.message || 'Área actualizada correctamente.',
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar'
+                    }).then(() => {
+                        $('#editAreaModal').modal('hide');
+                        // Puedes agregar aquí una recarga de tabla o contenido si lo necesitas
+                    });
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: xhr.responseJSON?.message || 'Ocurrió un error al actualizar el área.',
+                        icon: 'error',
+                        confirmButtonText: 'Cerrar'
+                    });
+                }
+            });
+        });
+    });
+</script>

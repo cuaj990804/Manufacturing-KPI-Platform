@@ -1,0 +1,94 @@
+.scanner-virtual-keyboard {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30000;
+    padding: 0.3rem 0.45rem calc(env(safe-area-inset-bottom, 0px) + 0.35rem);
+    background: linear-gradient(180deg, rgba(148, 163, 184, 0.08), rgba(15, 23, 42, 0.95));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 -10px 30px rgba(2, 6, 23, 0.45);
+}
+
+.scanner-virtual-keyboard.hidden {
+    display: none !important;
+}
+
+.scanner-virtual-keyboard .hg-theme-default {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+}
+
+.scanner-virtual-keyboard .hg-row {
+    justify-content: center;
+}
+
+.scanner-virtual-keyboard .hg-button {
+    height: 42px;
+    border: none;
+    border-radius: 11px;
+    margin: 2px;
+    background: linear-gradient(180deg, #f8fafc 0%, #dbe4f1 100%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 2px 8px rgba(15, 23, 42, 0.18);
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.scanner-virtual-keyboard .hg-button:active,
+.scanner-virtual-keyboard .hg-button.hg-activeButton {
+    background: linear-gradient(180deg, #dbe4f1 0%, #cbd5e1 100%);
+    transform: translateY(1px);
+}
+
+.scanner-virtual-keyboard .hg-button.hg-functionBtn {
+    background: linear-gradient(180deg, #cbd5e1 0%, #b8c3d2 100%);
+    color: #0f172a;
+}
+
+.scanner-virtual-keyboard .hg-button.hg-button-enter {
+    background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+    color: #eff6ff;
+}
+
+.scanner-virtual-keyboard .hg-button.hg-button-bksp {
+    background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+}
+
+.scanner-virtual-keyboard .hg-button.hg-button-space {
+    max-width: 320px;
+}
+
+.scanner-virtual-keyboard .hg-button.hg-button-hide {
+    background: linear-gradient(180deg, #fca5a5 0%, #f87171 100%);
+    color: #fff1f2;
+}
+
+.scanner-virtual-keyboard .hg-button[data-skbtn="{shift}"],
+.scanner-virtual-keyboard .hg-button[data-skbtn="{numbers}"],
+.scanner-virtual-keyboard .hg-button[data-skbtn="{abc}"] {
+    min-width: 62px;
+}
+
+body.scanner-keyboard-open {
+    padding-bottom: 255px !important;
+}
+
+@media (orientation: landscape) and (pointer: coarse) {
+    .scanner-virtual-keyboard {
+        padding: 0.2rem 0.4rem calc(env(safe-area-inset-bottom, 0px) + 0.2rem);
+    }
+
+    .scanner-virtual-keyboard .hg-button {
+        height: 36px;
+        font-size: 0.82rem;
+        border-radius: 10px;
+    }
+
+    body.scanner-keyboard-open {
+        padding-bottom: 215px !important;
+    }
+}

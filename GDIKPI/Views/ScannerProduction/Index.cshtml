@@ -1,0 +1,988 @@
+﻿@*
+    Scanner de Producción - Dashboard
+    ViewBag esperado:
+        ProductionLineId (int)
+        LineNumber       (string)
+        DailyGoal        (int)
+        AreaId           (int)
+        AreaName         (string)
+        CustomerName     (string)
+        ProgramName      (string)
+        PersonalQuantity (int?)
+        Rechazos         (int?)
+        Eficiencia       (string) -- ej. "53%"
+*@
+@{
+    Layout = null;
+    var lineName = (string?)ViewBag.LineName;
+    var lineNumberText = Convert.ToString(ViewBag.LineNumber) ?? "";
+    var hasLineName = !string.IsNullOrWhiteSpace(lineName);
+    var headerLabel = hasLineName ? "Programa" : "Línea";
+    var headerValue = hasLineName ? lineName! : lineNumberText;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner — @headerValue</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/css/index.css">
+    <link rel="stylesheet" href="~/css/scannerProduction/virtual-keyboard.css" asp-append-version="true">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: #060a0f;
+            color: #f1f5f9;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 1fr auto;
+        }
+
+        /* ── Grid métricas ── */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 2px;
+            background: #0d1117;
+        }
+
+        .metric-card {
+            background: #070d14;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .metric-card::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background-image: repeating-linear-gradient( -55deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px );
+                pointer-events: none;
+            }
+
+            .metric-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 4px;
+                height: 100%;
+            }
+
+        .card-gold::before {
+            background: #f59e0b;
+        }
+
+        .card-green::before {
+            background: #16a34a;
+        }
+
+        .card-red::before {
+            background: #dc2626;
+        }
+
+        .card-purple::before {
+            background: #3b82f6;
+        }
+
+        .metric-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: #cbd5e1;
+            text-shadow: 0 0 10px rgba(203,213,225,0.25);
+        }
+
+        .metric-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(12rem, 30vw, 26rem);
+            line-height: 0.82;
+            letter-spacing: 0.02em;
+        }
+
+        .card-gold .metric-value {
+            color: #f59e0b;
+            text-shadow: 0 0 60px rgba(245,158,11,0.2);
+        }
+
+        .card-green .metric-value {
+            color: #4ade80;
+            text-shadow: 0 0 60px rgba(74,222,128,0.2);
+        }
+
+        .card-red .metric-value {
+            color: #f87171;
+            text-shadow: 0 0 60px rgba(248,113,113,0.2);
+        }
+
+        .card-purple .metric-value {
+            color: #60a5fa;
+            text-shadow: 0 0 60px rgba(96,165,250,0.2);
+        }
+
+        /* ── Scan bar ── */
+        .scan-bar {
+            background: #060a0f;
+            border-top: 2px solid #0d1117;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1.5rem;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .scan-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.2em;
+            color: #cbd5e1;
+            text-shadow: 0 0 10px rgba(203,213,225,0.25);
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .scan-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #1e293b;
+            outline: none;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            color: #334155;
+            width: 220px;
+            padding: 0.2rem 0.25rem;
+            caret-color: #3b82f6;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+            .scan-input::placeholder {
+                color: #111827;
+            }
+
+        .scan-bar:focus-within .scan-label {
+            color: #3b82f6;
+        }
+
+        .scan-bar:focus-within .scan-input {
+            color: #64748b;
+            border-color: #1e3a5f;
+        }
+
+        .scan-cursor {
+            width: 6px;
+            height: 14px;
+            background: #1e293b;
+            animation: blink 1s step-end infinite;
+            flex-shrink: 0;
+        }
+
+        .scan-bar:focus-within .scan-cursor {
+            background: #3b82f6;
+        }
+
+        keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .divider {
+            color: #cbd5e1;
+            text-shadow: 0 0 10px rgba(203,213,225,0.25);
+            margin: 0 0.25rem;
+        }
+
+        .meta-tag {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            color: #cbd5e1;
+            text-shadow: 0 0 10px rgba(203,213,225,0.25);
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+            .meta-tag .val {
+                color: #cbd5e1;
+            }
+
+                .meta-tag .val.flash {
+                    color: #3b82f6;
+                    transition: color 0.3s;
+                }
+
+        .scan-action-btn {
+            border: 1px solid #334155;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.92);
+            color: #e2e8f0;
+            padding: 0.45rem 1rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .scan-action-btn:hover {
+            border-color: #60a5fa;
+            color: #93c5fd;
+        }
+
+        .scan-action-btn.keyboard-btn {
+            border-color: #1d4ed8;
+            color: #bfdbfe;
+        }
+
+        .scan-action-btn.keyboard-btn:hover {
+            border-color: #93c5fd;
+            color: #dbeafe;
+        }
+
+        .scan-toast {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #0b1220;
+            color: #e2e8f0;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            min-width: 280px;
+            max-width: 80vw;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.04em;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 9999;
+        }
+
+            .scan-toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            .scan-toast.success {
+                background: #14532d;
+                color: #ecfdf5;
+                border-color: #16a34a;
+            }
+
+            .scan-toast.error {
+                background: #7f1d1d;
+                color: #fef2f2;
+                border-color: #ef4444;
+            }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.9);
+            z-index: 10000;
+        }
+
+        .modal.reject-modal {
+            width: 100vw;
+            height: 100vh;
+            max-height: none;
+            background: radial-gradient(circle at top, #0f172a 0%, #020617 65%);
+            color: #e2e8f0;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            border: none;
+            border-radius: 0;
+            padding: 1.5rem 2rem;
+            gap: 1.25rem;
+        }
+
+        .reject-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .reject-modal-header h3 {
+            margin: 0;
+            font-size: clamp(2rem, 3vw, 3rem);
+            line-height: 1;
+        }
+
+        .reject-modal-header p {
+            margin-top: 0.4rem;
+            color: #94a3b8;
+            font-size: clamp(1rem, 1.3vw, 1.15rem);
+        }
+
+        .reject-modal-close {
+            min-width: 64px;
+            min-height: 64px;
+            border: 1px solid #334155;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.9);
+            color: #e2e8f0;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .reject-modal-body {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(360px, 34vw) minmax(0, 1fr);
+            gap: 1.25rem;
+        }
+
+        .reject-panel {
+            background: rgba(11, 18, 32, 0.92);
+            border: 1px solid #1e293b;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .reject-panel h4 {
+            font-size: 1.1rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #93c5fd;
+        }
+
+        .reject-field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .reject-field-group label {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .reject-field-group input {
+            width: 100%;
+            background: #020617;
+            color: #e2e8f0;
+            border: 2px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1rem 1.15rem;
+            outline: none;
+            font-size: 1.2rem;
+            font-family: inherit;
+        }
+
+        .reject-field-group input::placeholder {
+            color: #64748b;
+        }
+
+        .reject-field-group input:focus {
+            border-color: #3b82f6;
+        }
+
+        .reject-field-group input:disabled {
+            opacity: 0.55;
+        }
+
+        .reject-status {
+            font-size: 1rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid transparent;
+        }
+
+        .reject-status.success {
+            background: rgba(22, 163, 74, 0.15);
+            border-color: #16a34a;
+            color: #86efac;
+        }
+
+        .reject-status.error {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .reject-current-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .reject-current-count {
+            color: #93c5fd;
+            font-size: 0.95rem;
+        }
+
+        #defectsList {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 0.85rem;
+            padding: 0.75rem;
+            min-height: 140px;
+            max-height: 34vh;
+            overflow-y: auto;
+        }
+
+        .defect-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            background: #0b1220;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 0.9rem 1rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .defect-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .defect-item-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .defect-item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+        }
+
+        .defect-item-text strong {
+            color: #e2e8f0;
+            font-size: 1.15rem;
+        }
+
+        .defect-item-text span {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .defect-item-remove {
+            background: transparent;
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            cursor: pointer;
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.55rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .defect-item-remove:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .reject-selection-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .reject-selection-header span {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .available-defects-list {
+            min-height: 0;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 0.8rem;
+            align-content: start;
+            padding-right: 0.25rem;
+        }
+
+        .available-defect-item {
+            text-align: left;
+            border: 1px solid #334155;
+            border-radius: 0.9rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+            color: #e2e8f0;
+            padding: 0.9rem 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            transition: border-color 0.2s, transform 0.2s, background 0.2s;
+        }
+
+        .available-defect-item:hover {
+            border-color: #60a5fa;
+            transform: translateY(-1px);
+        }
+
+        .available-defect-item.selected {
+            border-color: #16a34a;
+            background: linear-gradient(180deg, rgba(20, 83, 45, 0.95), rgba(6, 78, 59, 0.95));
+        }
+
+        .available-defect-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+
+        .available-defect-item-info strong {
+            font-size: 1rem;
+            color: #f8fafc;
+        }
+
+        .available-defect-item-info span {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .available-defect-item-action {
+            align-self: center;
+            color: #93c5fd;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .available-defect-item.selected .available-defect-item-action {
+            color: #dcfce7;
+        }
+
+        .available-defects-empty {
+            min-height: 180px;
+            display: grid;
+            place-items: center;
+            border: 1px dashed #334155;
+            border-radius: 1rem;
+            color: #64748b;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .modal-btn {
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.95rem 1.4rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1.05rem;
+            font-family: inherit;
+        }
+
+        .modal-btn-primary {
+            background: #16a34a;
+            color: #f0fdf4;
+        }
+
+        .modal-btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        @@media (min-width: 981px) and (max-width: 1366px) and (orientation: landscape) {
+            .metric-label {
+                font-size: clamp(0.72rem, 1.2vw, 1rem);
+                letter-spacing: 0.18em;
+            }
+
+            .metric-value {
+                font-size: clamp(8rem, 19vw, 14rem);
+            }
+
+            .scan-bar {
+                padding: 0.45rem 1rem;
+                gap: 0.55rem;
+            }
+
+            .scan-label,
+            .meta-tag {
+                font-size: 0.62rem;
+                letter-spacing: 0.13em;
+            }
+
+            .scan-input {
+                width: 180px;
+                font-size: 0.72rem;
+            }
+
+            .scan-cursor {
+                height: 12px;
+            }
+
+            .modal.reject-modal {
+                padding: 1rem 1.1rem;
+                gap: 0.8rem;
+            }
+
+            .reject-modal-header h3 {
+                font-size: clamp(1.5rem, 2vw, 2.1rem);
+            }
+
+            .reject-modal-header p {
+                font-size: 0.92rem;
+                margin-top: 0.2rem;
+            }
+
+            .reject-modal-close {
+                min-width: 52px;
+                min-height: 52px;
+                font-size: 1.15rem;
+            }
+
+            .reject-modal-body {
+                grid-template-columns: minmax(300px, 31vw) minmax(0, 1fr);
+                gap: 0.85rem;
+            }
+
+            .reject-panel {
+                padding: 0.9rem;
+                gap: 0.65rem;
+            }
+
+            .reject-panel h4,
+            .reject-selection-header span,
+            .reject-current-count {
+                font-size: 0.82rem;
+            }
+
+            .reject-field-group {
+                gap: 0.3rem;
+            }
+
+            .reject-field-group label {
+                font-size: 0.78rem;
+                letter-spacing: 0.05em;
+            }
+
+            .reject-field-group input {
+                padding: 0.75rem 0.9rem;
+                font-size: 0.98rem;
+                border-radius: 0.6rem;
+            }
+
+            .reject-status {
+                font-size: 0.86rem;
+                padding: 0.65rem 0.8rem;
+            }
+
+            #defectsList {
+                min-height: 96px;
+                max-height: 26vh;
+                padding: 0.55rem;
+            }
+
+            .defect-item {
+                padding: 0.65rem 0.75rem;
+                gap: 0.7rem;
+                margin-bottom: 0.45rem;
+            }
+
+            .defect-item-text strong {
+                font-size: 0.96rem;
+            }
+
+            .defect-item-text span {
+                font-size: 0.78rem;
+            }
+
+            .defect-item-remove {
+                padding: 0.42rem 0.7rem;
+                font-size: 0.8rem;
+            }
+
+            .available-defects-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.6rem;
+            }
+
+            .available-defect-item {
+                padding: 0.72rem 0.8rem;
+                border-radius: 0.7rem;
+                gap: 0.7rem;
+            }
+
+            .available-defect-item-info strong {
+                font-size: 0.9rem;
+            }
+
+            .available-defect-item-info span,
+            .available-defect-item-action {
+                font-size: 0.76rem;
+            }
+
+            .available-defects-empty {
+                min-height: 120px;
+                font-size: 0.85rem;
+            }
+
+            .modal-buttons {
+                gap: 0.75rem;
+            }
+
+            .modal-btn {
+                padding: 0.72rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        @@media (max-width: 980px) {
+            .modal.reject-modal {
+                padding: 1rem;
+            }
+
+            .reject-modal-body {
+                grid-template-columns: 1fr;
+            }
+
+            .available-defects-list {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-buttons {
+                justify-content: stretch;
+            }
+
+            .modal-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Métricas -->
+    <div class="metrics-grid">
+
+        <!-- Requerimiento -->
+        <div class="metric-card card-gold">
+            <p class="metric-label">Requerimiento</p>
+            <p class="metric-value" id="requerimiento">@(ViewBag.DailyGoal ?? 0)</p>
+        </div>
+
+        <!-- Balance -->
+        <div class="metric-card card-green" id="producidasCard">
+            <p class="metric-label">Balance</p>
+            <p class="metric-value" id="producidas">0%</p>
+        </div>
+
+        <!-- Rechazos -->
+        <div class="metric-card card-red">
+            <p class="metric-label">Rechazos</p>
+            <p class="metric-value" id="rechazos">@(ViewBag.Rechazos ?? 0)</p>
+        </div>
+
+        <!-- Eficiencia -->
+        <div class="metric-card card-purple">
+            <p class="metric-label">Eficiencia</p>
+            <p class="metric-value" id="eficiencia">@(ViewBag.Eficiencia ?? "0%")</p>
+        </div>
+
+    </div>
+
+    <!-- Barra de escaneo -->
+    <div class="scan-bar">
+        <span class="scan-label">scan &gt;</span>
+        <input type="text"
+               class="scan-input"
+               id="scanInput"
+               placeholder="____________________"
+               inputmode="none"
+               autocomplete="off"
+               autocorrect="off"
+               autocapitalize="off"
+               spellcheck="false"
+               autofocus />
+        <div class="scan-cursor"></div>
+
+        <span class="divider">|</span>
+        <span class="meta-tag">@headerLabel : <span class="val">@headerValue</span></span>
+
+        <span class="divider">|</span>
+        <span class="meta-tag">Personas : <span class="val">@(ViewBag.PersonalQuantity ?? 0)</span></span>
+
+        <span class="divider">|</span>
+        <span class="meta-tag">Último : <span class="val" id="lastCode">—</span></span>
+
+        <span class="divider">|</span>
+        <button type="button" class="scan-action-btn keyboard-btn" data-scanner-keyboard-trigger onclick="openScanKeyboard()">Teclado</button>
+
+        <span class="divider">|</span>
+        <button type="button" class="scan-action-btn" onclick="handleExit()">Salir</button>
+    </div>
+
+    <div id="scanToast" class="scan-toast"></div>
+
+    <div id="rejectModal" class="modal-overlay hidden">
+        <div class="modal reject-modal">
+            <div class="reject-modal-header">
+                <div>
+                    <h3>Rechazar Escaneo</h3>
+                   
+                </div>
+                <button type="button" class="reject-modal-close" onclick="closeRejectModal()">X</button>
+            </div>
+
+            <div class="reject-modal-body">
+                <section class="reject-panel">
+                    <h4>Captura</h4>
+
+                    <div class="reject-field-group">
+                        <label for="rejectEmployeeInput">Numero de empleado</label>
+                        <input id="rejectEmployeeInput" type="text" placeholder="Numero de empleado" />
+                    </div>
+
+                    <div class="reject-field-group">
+                        <label for="rejectPieceInput">Pieza rechazada</label>
+                        <input id="rejectPieceInput" type="text" placeholder="Escanea pieza rechazada" />
+                    </div>
+
+                    <div id="rejectPieceStatus" class="reject-status hidden"></div>
+
+                    <div class="reject-field-group">
+                        <label for="rejectDefectInput">Escanear defecto</label>
+                        <input id="rejectDefectInput" type="text" placeholder="Escanea defecto" disabled />
+                    </div>
+
+                    <div class="reject-current-title">
+                        <h4>Defectos agregados</h4>
+                        <span class="reject-current-count" id="rejectDefectsCount">0 seleccionados</span>
+                    </div>
+                    <div id="defectsList" class="hidden"></div>
+                </section>
+
+                <section class="reject-panel">
+                    <div class="reject-selection-header">
+                        <h4>Seleccion manual</h4>
+                        <span>Defectos del area actual</span>
+                    </div>
+
+                    <div class="reject-field-group">
+                        <label for="rejectDefectSearch">Buscar defecto</label>
+                        <input id="rejectDefectSearch" type="text" placeholder="Buscar por codigo, nombre o categoria" />
+                    </div>
+
+                    <div id="availableDefectsEmpty" class="available-defects-empty hidden">
+                        No hay defectos disponibles para esta area.
+                    </div>
+                    <div id="availableDefectsList" class="available-defects-list"></div>
+                </section>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="confirmRejectBtn" class="modal-btn modal-btn-primary" onclick="confirmReject()" disabled>Confirmar rechazo</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeRejectModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scannerVirtualKeyboardHost" class="scanner-virtual-keyboard hidden">
+        <div id="scannerVirtualKeyboard" class="simple-keyboard"></div>
+    </div>
+
+    <!-- SCRIPTS AL FINAL DEL BODY -->
+    <!-- SignalR PRIMERO -->
+    <script src="https://unpkg.com/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
+
+    <!-- Datos del servidor -->
+    <script>
+        window.SCANNER_KEYBOARD_SELECTOR = '#scanInput';
+        window.SCANNER_DATA = {
+            productionLineId: @ViewBag.ProductionLineId,
+            lineNumber:       '@ViewBag.LineNumber',
+            dailyGoal:        @(ViewBag.DailyGoal ?? 0),
+            areaId:           @ViewBag.AreaId,
+            areaName:         '@ViewBag.AreaName',
+            customerName:     '@ViewBag.CustomerName',
+            programName:      '@headerValue',
+            personalQuantity: @(ViewBag.PersonalQuantity ?? 0),
+            standardTime:     @(ViewBag.StandardTime ?? 0)
+        };
+    </script>
+
+    <!-- Lógica del input -->
+    <script>
+        const scanInput = document.getElementById('scanInput');
+        const lastCode  = document.getElementById('lastCode');
+
+        function openScanKeyboard() {
+            if (!scanInput) {
+                return;
+            }
+
+            scanInput.focus();
+
+            if (window.ScannerVirtualKeyboard?.showForInput) {
+                window.ScannerVirtualKeyboard.showForInput(scanInput);
+            }
+        }
+
+        // Mantener foco en scanner solo cuando no hay modal de rechazo abierto
+        document.addEventListener('click', () => {
+            const rejectModal = document.getElementById('rejectModal');
+            const isRejectModalOpen = rejectModal && !rejectModal.classList.contains('hidden');
+            if (!isRejectModalOpen) {
+                scanInput.focus();
+            }
+        });
+    </script>
+
+    <!-- Scripts modulares -->
+    <script src="~/js/ScannerProduction/constants.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/signalr-connection.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/metrics.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/scanner.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/partNumber.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/reject.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/history.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/main.js" asp-append-version="true"></script>
+    <script src="~/js/ScannerProduction/virtual-keyboard.js" asp-append-version="true"></script>
+
+</body>
+</html>

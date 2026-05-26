@@ -1,0 +1,74 @@
+﻿@{
+    Layout = null;
+}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Escaneo</title>
+  
+</head>
+<link rel="stylesheet" href="~/css/productionOperators/styles.css" asp-append-version="true">
+<body>
+    <h1 class="title">MÓDULO DE ESCANEO</h1>
+
+    <div class="scanner-layout">
+        <main class="fields">
+            <!-- Campo Empleado -->
+            <div class="field">
+                <div class="field-label">Número de Empleado</div>
+                <input type="text"
+                       id="employeeInput"
+                       class="field-input"
+                       placeholder="Escanear..."
+                       autocomplete="off">
+                <div class="status-text" id="employeeStatus"></div>
+            </div>
+
+            <!-- Campo Volante -->
+            <div class="field">
+                <div class="field-label">Volante</div>
+                <input type="text"
+                       id="volanteInput"
+                       class="field-input"
+                       placeholder="Escanear..."
+                       autocomplete="off"
+                       disabled>
+                <div class="status-text" id="volanteStatus"></div>
+            </div>
+        </main>
+     
+        <aside class="recent-scans" aria-label="Ultimos escaneos">
+            <div class="recent-scans-header">
+                <h2>Ultimos escaneos</h2>
+                <button id="openScansModal" class="open-modal-btn">
+                    Ver detalles
+                </button>
+            </div>
+            <div class="recent-scans-list" id="recentScansList">
+                <div class="recent-scans-empty">Cargando...</div>
+            </div>
+        </aside>
+        <div class="modal-overlay" id="scansModal">
+            <div class="modal-container">
+
+                <div class="modal-header">
+                    <h2>Piezas por persona</h2>
+                    <button id="closeScansModal" class="close-modal-btn">✕</button>
+                </div>
+                <div class="modal-search-container">
+                    <input type="text"
+                           id="modalSearchInput"
+                           class="modal-search-input"
+                           placeholder="Buscar empleado, operación o número...">
+                </div>
+                <div class="modal-body" id="modalScansContent">
+                    <div class="recent-scans-empty">Cargando...</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/productionOperators/main.js"></script>
+</body>

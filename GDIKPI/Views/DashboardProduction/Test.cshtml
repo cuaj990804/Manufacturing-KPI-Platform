@@ -1,0 +1,70 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+<h2>Consulta de Producción Diaria</h2>
+
+<form id="formConsulta">
+    <label for="linea">ID Línea de Producción:</label>
+    <input type="number" id="linea" name="linea" required><br><br>
+
+    <label for="fecha">Fecha:</label>
+    <input type="date" id="fecha" name="fecha"><br><br>
+
+    <button type="submit">Consultar</button>
+</form>
+
+<h3>Resultados:</h3>
+<table border="1" id="tablaResultados">
+    <thead>
+        <tr>
+            <th>Hora</th>
+            <th>Meta</th>
+            <th>Producidas</th>
+            <th>Rechazadas</th>
+            <th>Downtime</th>
+            <th>Balance %</th>
+            <th>Acumulado %</th>
+            <th>Break</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    document.getElementById("formConsulta").addEventListener("submit", async function(e) {
+        e.preventDefault();
+
+        const linea = document.getElementById("linea").value;
+        const fecha = document.getElementById("fecha").value;
+
+        const url = `http://localhost:5016/api/Production/daily-production?productionLinesId=${linea}${fecha ? `&targetDate=${fecha}` : ''}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Error en la consulta");
+
+            const data = await response.json();
+            const tbody = document.querySelector("#tablaResultados tbody");
+            tbody.innerHTML = ""; // limpiar resultados anteriores
+
+            data.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${row.hourInterval}</td>
+                    <td>${row.goalPieces}</td>
+                    <td>${row.producedPieces}</td>
+                    <td>${row.rejectedPieces}</td>
+                    <td>${row.downtimeMinutes}</td>
+                    <td>${row.hourlyBalance}</td>
+                    <td>${row.accumulatedBalance}</td>
+                    <td>${row.breakInfo}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            alert("Error al obtener los datos: " + error.message);
+        }
+    });
+</script>
