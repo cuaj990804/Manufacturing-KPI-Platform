@@ -11,29 +11,48 @@
 <link rel="stylesheet" href="~/css/productionOperators/styles.css" asp-append-version="true">
 <body>
     <h1 class="title">MÓDULO DE ESCANEO</h1>
+    @if (ViewBag.AreaId != null)
+    {
+        <div class="area-context">
+            @ViewBag.CustomerName - @ViewBag.AreaName
+        </div>
+    }
+
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <div class="area-context error">
+            @ViewBag.ErrorMessage
+        </div>
+    }
 
     <div class="scanner-layout">
         <main class="fields">
             <!-- Campo Empleado -->
             <div class="field">
                 <div class="field-label">Número de Empleado</div>
-                <input type="text"
-                       id="employeeInput"
-                       class="field-input"
-                       placeholder="Escanear..."
-                       autocomplete="off">
+                <div class="input-clear-wrapper">
+                    <input type="text"
+                           id="employeeInput"
+                           class="field-input"
+                           placeholder="Escanear..."
+                           autocomplete="off">
+                    <button type="button" id="clearEmployeeInput" class="clear-input-btn">Borrar</button>
+                </div>
                 <div class="status-text" id="employeeStatus"></div>
             </div>
 
             <!-- Campo Volante -->
             <div class="field">
                 <div class="field-label">Volante</div>
-                <input type="text"
-                       id="volanteInput"
-                       class="field-input"
-                       placeholder="Escanear..."
-                       autocomplete="off"
-                       disabled>
+                <div class="input-clear-wrapper">
+                    <input type="text"
+                           id="volanteInput"
+                           class="field-input"
+                           placeholder="Escanear..."
+                           autocomplete="off"
+                           disabled>
+                    <button type="button" id="clearVolanteInput" class="clear-input-btn">Borrar</button>
+                </div>
                 <div class="status-text" id="volanteStatus"></div>
             </div>
         </main>
@@ -70,5 +89,13 @@
         </div>
     </div>
 
-    <script src="~/js/productionOperators/main.js"></script>
+    <script>
+        window.productionOperatorsConfig = {
+            areaId: @(ViewBag.AreaId != null ? ViewBag.AreaId : "null"),
+            areaName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.AreaName ?? "")),
+            customerName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CustomerName ?? "")),
+            scannerValidation: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ScannerValidation))
+        };
+    </script>
+    <script src="~/js/productionOperators/main.js" asp-append-version="true"></script>
 </body>

@@ -24,6 +24,32 @@
     </a>
 </div>
 
+<button type="button" id="dashboard-config-toggle" class="dashboard-config-toggle" title="Configurar tarjetas">
+    <i class="fas fa-sliders-h"></i>
+</button>
+
+<aside id="dashboard-config-panel" class="dashboard-config-panel" aria-label="Configurar tarjetas">
+    <div class="dashboard-config-header">
+        <div>
+            <div class="dashboard-config-title">Tarjetas visibles</div>
+            <div class="dashboard-config-subtitle">Selecciona las lineas que quieres ver</div>
+        </div>
+        <button type="button" id="dashboard-config-close" class="dashboard-config-close" title="Cerrar">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div id="dashboard-card-options" class="dashboard-card-options">
+        <div class="dashboard-config-empty">Cargando lineas...</div>
+    </div>
+
+    <div class="dashboard-config-actions">
+        <button type="button" id="dashboard-select-all" class="dashboard-config-action">Mostrar todas</button>
+        <button type="button" id="dashboard-clear-all" class="dashboard-config-action secondary">Ocultar todas</button>
+        <button type="button" id="dashboard-confirm-visibility" class="dashboard-config-action confirm" disabled>Confirmar</button>
+    </div>
+</aside>
+
 <div class="dashboard" id="cards-container">
     <!-- Las tarjetas se cargan dinámicamente -->
 </div>
@@ -38,5 +64,5 @@
         };
     </script>
     <script src="https://unpkg.com/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
-    <script src="~/js/DashboardProduction/dashboard.js"></script>
+    <script src="~/js/DashboardProduction/dashboard.js" asp-append-version="true"></script>
 }

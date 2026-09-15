@@ -942,7 +942,8 @@
             customerName:     '@ViewBag.CustomerName',
             programName:      '@headerValue',
             personalQuantity: @(ViewBag.PersonalQuantity ?? 0),
-            standardTime:     @(ViewBag.StandardTime ?? 0)
+            standardTime:     @(ViewBag.StandardTime ?? 0),
+            scannerValidation: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ScannerValidation))
         };
     </script>
 

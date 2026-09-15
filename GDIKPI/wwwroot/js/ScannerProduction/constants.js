@@ -25,7 +25,9 @@ const CONFIG = {
         PROGRAMS_BY_CUSTOMER: '/ScannerProduction/GetProgramsByCustomer'
     },
     UI: {
-        RESET_SCAN_STATUS_DELAY: 2000 // 2 segundos
+        RESET_SCAN_STATUS_DELAY: 2000, // 2 segundos
+        SCAN_INPUT_SETTLE_DELAY: 200, // Espera breve para que el scanner termine de escribir
+        SAME_SCAN_SUPPRESS_DELAY: 10000 // Ignora repeticiones inmediatas del mismo codigo
     }
 };
 
@@ -46,6 +48,7 @@ const state = {
     areaId: null,
     areaName: null,
     customerName: null,
+    scannerValidation: {},
     personalQuantity: null,
     standardTime: 0,
     availableMinutes: 0,
@@ -58,3 +61,9 @@ const state = {
 let selectedMethod = null;
 let searchResults = [];
 let selectedProgramData = null;
+let isScanInProgress = false;
+let scanInputSettleTimeout = null;
+let activeScanValue = null;
+let activeScanStartedAt = 0;
+let lastSavedScanValue = null;
+let lastSavedScanAt = 0;

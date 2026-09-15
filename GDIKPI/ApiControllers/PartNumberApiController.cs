@@ -26,7 +26,8 @@ namespace GDIKPI.ApiControllers
                 }
 
                 // URL del API externo
-                var externalApiUrl = $"http://192.168.1.1:9091/GetPartNumber?partNumber={Uri.EscapeDataString(partNumber)}";
+                var baseUrl = (_configuration["ExternalApi:BaseUrl"] ?? "http://localhost:9091").TrimEnd('/');
+                var externalApiUrl = $"{baseUrl}/GetPartNumber?partNumber={Uri.EscapeDataString(partNumber)}";
 
                 var httpClient = _httpClientFactory.CreateClient();
                 var response = await httpClient.GetAsync(externalApiUrl);

@@ -34,7 +34,7 @@ namespace GDIKPI.ApiControllers
             _context = context;
             _hubContext = hubContext;
             // Leer la URL del API externa desde configuración (para mejor mantenibilidad)
-            _externalApiBaseUrl = _configuration["ExternalApi:BaseUrl"] ?? "http://192.168.1.1:9091";
+            _externalApiBaseUrl = _configuration["ExternalApi:BaseUrl"] ?? "http://localhost:9091";
         }
 
         /// <summary>
@@ -262,7 +262,8 @@ namespace GDIKPI.ApiControllers
         }
 
         /// <summary>
-        /// Guarda un escaneo en la base de datos
+        /// Registra la pieza en ProductionData y, cuando se solicita desde el escaneo por linea,
+        /// crea tambien el historial individual en ScannerProduction.
         /// </summary>
         /// <param name="request">Datos del escaneo</param>
         /// <returns>Resultado de la operación</returns>
@@ -290,8 +291,48 @@ namespace GDIKPI.ApiControllers
                     return BadRequest(new { error = "ScannerValue es requerido" });
                 }
 
-                // Actualizar o insertar en ProductionData
+                var normalizedScannerValue = request.ScannerValue.Trim().ToUpperInvariant();
+                request.ScannerValue = normalizedScannerValue;
+
+                var productionLine = await _context.ProductionLines
+                    .Include(pl => pl.Area)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(pl => pl.ProductionLinesId == request.LineId);
+
+                if (productionLine == null)
+                {
+                    return BadRequest(new { error = "La linea de produccion no existe" });
+                }
+
+                if (!ValidateConfiguredCustomerScan(productionLine, normalizedScannerValue, out var validationError))
+                {
+                    return BadRequest(new { error = validationError });
+                }
+
                 var now = DateTime.Now;
+                var todayStart = now.Date;
+                var tomorrowStart = todayStart.AddDays(1);
+
+                if (request.RejectDuplicate)
+                {
+                    var alreadyRegistered = await _context.ScannerProductions
+                        .AsNoTracking()
+                        .AnyAsync(scan =>
+                            scan.ScannerValue == normalizedScannerValue &&
+                            scan.ScannerProductionDateTime >= todayStart &&
+                            scan.ScannerProductionDateTime < tomorrowStart);
+
+                    if (alreadyRegistered)
+                    {
+                        return Conflict(new
+                        {
+                            success = false,
+                            error = "Este volante ya fue escaneado hoy"
+                        });
+                    }
+                }
+
+                // Actualizar o insertar en ProductionData
                 var currentDate = DateOnly.FromDateTime(now);
                 var currentTime = TimeOnly.FromDateTime(now);
                 var startHour = new TimeOnly(now.Hour, 0, 0);
@@ -354,17 +395,6 @@ namespace GDIKPI.ApiControllers
                     ? "SIN_PARTE"
                     : request.PartNumber.Trim();
 
-                // Crear el registro de escaneo
-                var scannerProduction = new ScannerProduction
-                {
-                    ScannerProductionDateTime = now,
-                    LineId = request.LineId,
-                    PartNumber = effectivePartNumber,
-                    ScannerValue = request.ScannerValue
-                };
-
-                _context.ScannerProductions.Add(scannerProduction);
-
                 // Buscar el registro de ProductionData correspondiente al intervalo de hora actual
                 var productionData = await _context.ProductionData
                     .Where(pd => pd.ProductionLinesId == request.LineId
@@ -403,6 +433,20 @@ namespace GDIKPI.ApiControllers
                     _context.ProductionData.Add(productionData);
                 }
 
+                ScannerProduction? scannerProductionHistory = null;
+                if (request.SaveScannerProductionHistory)
+                {
+                    scannerProductionHistory = new ScannerProduction
+                    {
+                        ScannerProductionDateTime = now,
+                        LineId = request.LineId,
+                        PartNumber = effectivePartNumber,
+                        ScannerValue = normalizedScannerValue
+                    };
+
+                    _context.ScannerProductions.Add(scannerProductionHistory);
+                }
+
                 await _context.SaveChangesAsync();
 
                 // 🔥 BROADCAST DUAL: Dashboard de área + Scanner de línea
@@ -412,23 +456,38 @@ namespace GDIKPI.ApiControllers
                     eventType: "SCANNER_SCAN",
                     additionalData: new
                     {
-                        scannerValue = request.ScannerValue,
+                        scannerValue = normalizedScannerValue,
                         partNumber = effectivePartNumber,
                         programDescription = effectiveProgramDescription
                     }
                 );
 
+                if (scannerProductionHistory != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("ProductionLinesScannerUpdated", new
+                    {
+                        scannerProductionId = scannerProductionHistory.ScannerProductionId,
+                        scannerValue = normalizedScannerValue,
+                        scannerProductionDateTime = scannerProductionHistory.ScannerProductionDateTime,
+                        lineId = productionLine.ProductionLinesId,
+                        lineNumber = productionLine.LineNumber,
+                        lineName = productionLine.LineName,
+                        areaId = productionLine.AreaId,
+                        producedPieces = productionData.ProducedPieces
+                    });
+                }
+
                 return Ok(new
                 {
                     success = true,
-                    message = "Escaneo guardado exitosamente",
+                    message = "Produccion actualizada exitosamente",
                     data = new
                     {
-                        scannerProductionId = scannerProduction.ScannerProductionId,
-                        scannerProductionDateTime = scannerProduction.ScannerProductionDateTime,
-                        lineId = scannerProduction.LineId,
-                        partNumber = scannerProduction.PartNumber,
-                        scannerValue = scannerProduction.ScannerValue,
+                        lineId = request.LineId,
+                        partNumber = effectivePartNumber,
+                        scannerValue = normalizedScannerValue,
+                        scannerProductionId = scannerProductionHistory?.ScannerProductionId,
+                        scannerProductionDateTime = scannerProductionHistory?.ScannerProductionDateTime,
                         productionData = new
                         {
                             productionId = productionData.ProductionId,
@@ -455,6 +514,51 @@ namespace GDIKPI.ApiControllers
         /// </summary>
         /// <param name="lineId">ID de la línea de producción</param>
         /// <returns>Resultado de la operación</returns>
+        private bool ValidateConfiguredCustomerScan(ProductionLine productionLine, string scannerValue, out string error)
+        {
+            error = string.Empty;
+
+            var customerName = $"{productionLine.Area?.CustomerName} {productionLine.Area?.AreaName}";
+            if (!customerName.Contains("zf", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var zfSection = _configuration.GetSection("ScannerValidation:ZF");
+            if (!zfSection.GetValue<bool>("Enabled"))
+            {
+                return true;
+            }
+
+            var allowedPrefixes = zfSection.GetSection("AllowedPrefixes").Get<string[]>() ?? Array.Empty<string>();
+            var allowedSuffixes = zfSection.GetSection("AllowedSuffixes").Get<string[]>() ?? Array.Empty<string>();
+            var normalizedScan = scannerValue.Trim().ToUpperInvariant();
+
+            var normalizedPrefixes = allowedPrefixes
+                .Select(prefix => (prefix ?? string.Empty).Trim().ToUpperInvariant())
+                .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+                .ToArray();
+
+            var normalizedSuffixes = allowedSuffixes
+                .Select(suffix => (suffix ?? string.Empty).Trim().ToUpperInvariant())
+                .Where(suffix => !string.IsNullOrWhiteSpace(suffix))
+                .ToArray();
+
+            var hasValidPrefix = normalizedPrefixes.Length == 0
+                || normalizedPrefixes.Any(prefix => normalizedScan.StartsWith(prefix));
+
+            var hasValidSuffix = normalizedSuffixes.Length == 0
+                || normalizedSuffixes.Any(suffix => normalizedScan.EndsWith(suffix));
+
+            if (hasValidPrefix && hasValidSuffix)
+            {
+                return true;
+            }
+
+            error = "Lectura alterada. Reescanea la pieza.";
+            return false;
+        }
+
         [HttpDelete("DeleteLastScan")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -595,11 +699,11 @@ namespace GDIKPI.ApiControllers
         }
 
         /// <summary>
-        /// Valida si un código ya fue escaneado previamente en la tabla ScannerProduction
+        /// Valida si un código ya fue escaneado durante el día actual en ScannerProduction.
         /// </summary>
         /// <param name="scannerValue">Valor del código a validar</param>
         /// <param name="lineId">ID de la línea de producción (opcional)</param>
-        /// <returns>Indica si el código ya fue escaneado y los detalles del escaneo previo</returns>
+        /// <returns>Indica si el código ya fue escaneado hoy y los detalles del escaneo.</returns>
         [HttpGet("ValidateScannerValue")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -613,9 +717,17 @@ namespace GDIKPI.ApiControllers
                     return BadRequest(new { error = "ScannerValue es requerido" });
                 }
 
-                // Buscar si el valor ya fue escaneado
+                var normalizedScannerValue = scannerValue.Trim().ToUpperInvariant();
+                var todayStart = DateTime.Today;
+                var tomorrowStart = todayStart.AddDays(1);
+
+                // Buscar si el valor ya fue escaneado durante el día actual.
                 var query = _context.ScannerProductions
-                    .Where(s => s.ScannerValue == scannerValue);
+                    .AsNoTracking()
+                    .Where(s =>
+                        s.ScannerValue == normalizedScannerValue &&
+                        s.ScannerProductionDateTime >= todayStart &&
+                        s.ScannerProductionDateTime < tomorrowStart);
 
                 // Si se proporciona lineId, filtrar por línea
                 if (lineId.HasValue && lineId.Value > 0)
@@ -639,7 +751,7 @@ namespace GDIKPI.ApiControllers
                     {
                         isValid = false,
                         alreadyScanned = true,
-                        message = "Este código ya fue escaneado previamente",
+                        message = "Este código ya fue escaneado hoy",
                         scanDetails = new
                         {
                             scannerProductionId = existingScan.ScannerProductionId,
@@ -657,7 +769,7 @@ namespace GDIKPI.ApiControllers
                 {
                     isValid = true,
                     alreadyScanned = false,
-                    message = "El código es válido y no ha sido escaneado previamente"
+                    message = "El código es válido y no ha sido escaneado hoy"
                 });
             }
             catch (Exception ex)
@@ -1636,6 +1748,8 @@ namespace GDIKPI.ApiControllers
         public string ScannerValue { get; set; } = string.Empty;
         public int? ProgramId { get; set; }
         public string? ProgramDescription { get; set; }
+        public bool RejectDuplicate { get; set; }
+        public bool SaveScannerProductionHistory { get; set; }
     }
 
     /// <summary>

@@ -15,6 +15,8 @@ public partial class ProductionOperator
 
     public int? AreaId { get; set; }
 
+    public int? ProductionLinesId { get; set; }
+
     public string? Operation { get; set; }
 
     public int? Goal { get; set; }
@@ -22,6 +24,8 @@ public partial class ProductionOperator
     public bool? Active { get; set; }
 
     public virtual Area? Area { get; set; }
+
+    public virtual ProductionLine? ProductionLines { get; set; }
 
     public virtual ICollection<ProductionOperatorsScan> ProductionOperatorsScans { get; set; } = new List<ProductionOperatorsScan>();
 }

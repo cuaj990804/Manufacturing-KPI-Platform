@@ -23,37 +23,52 @@ namespace GDIKPI.Services
             return employeeNumberClaim ?? "0";
         }
 
-        public async Task LogProductionDataAction(string actionType, int productionDataId, string details = null)
+        public async Task LogProductionDataAction(string actionType, int productionDataId, string? details = null)
         {
             await LogAction(actionType, "ProductionData", productionDataId, details);
         }
 
-        public async Task LogDefectAction(string actionType, int defectDataId, string details = null)
+        public async Task LogDefectAction(string actionType, int defectDataId, string? details = null)
         {
             await LogAction(actionType, "DefectsData", defectDataId, details);
         }
 
-        public async Task LogDowntimeAction(string actionType, int downtimeId, string details = null)
+        public async Task LogDowntimeAction(string actionType, int downtimeId, string? details = null)
         {
             await LogAction(actionType, "DowntimeEvent", downtimeId, details);
         }
 
-        public async Task LogAbsenteeismAction(string actionType, int absenteeismId, string details = null)
+        public async Task LogAbsenteeismAction(string actionType, int absenteeismId, string? details = null)
         {
             await LogAction(actionType, "Absenteeism", absenteeismId, details);
         }
 
-        public async Task LogRejectionAction(string actionType, int rejectionId, string details = null)
+        public async Task LogRejectionAction(string actionType, int rejectionId, string? details = null)
         {
             await LogAction(actionType, "Rejection", rejectionId, details);
         }
 
-        public async Task LogProductionLineAction(string actionType, int productionLineId, string details = null)
+        public async Task LogProductionLineAction(string actionType, int productionLineId, string? details = null)
         {
             await LogAction(actionType, "ProductionLine", productionLineId, details);
         }
 
-        private async Task LogAction(string actionType, string entityName, int entityId, string details = null)
+        public async Task LogProductionOperatorAction(string actionType, int operatorId, string? details = null)
+        {
+            await LogAction(actionType, "ProductionOperator", operatorId, details);
+        }
+
+        public async Task LogProductionOperatorScanAction(string actionType, int scanId, string? details = null)
+        {
+            await LogAction(actionType, "ProductionOperatorsScan", scanId, details);
+        }
+
+        public async Task LogProductionOperatorScanAttemptAction(string actionType, int employeeNumber, string? details = null)
+        {
+            await LogAction(actionType, "ProductionOperatorsScanAttempt", employeeNumber, details);
+        }
+
+        private async Task LogAction(string actionType, string entityName, int entityId, string? details = null)
         {
             var employeeNumber = GetCurrentEmployeeNumber();
 

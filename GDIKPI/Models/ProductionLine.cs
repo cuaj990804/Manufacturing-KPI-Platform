@@ -37,6 +37,8 @@ public partial class ProductionLine
 
     public virtual ICollection<ProductionDatum> ProductionData { get; set; } = new List<ProductionDatum>();
 
+    public virtual ICollection<ProductionOperator> ProductionOperators { get; set; } = new List<ProductionOperator>();
+
     public virtual ICollection<Rejection> Rejections { get; set; } = new List<Rejection>();
 
     public virtual Shift ShiftNumberNavigation { get; set; } = null!;

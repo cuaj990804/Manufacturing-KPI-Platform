@@ -1,4 +1,4 @@
-﻿using GDIKPI.Data;
+using GDIKPI.Data;
 using GDIKPI.Models;
 using GDIKPI.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +16,13 @@ namespace GDIKPI.Controllers
     {
         private readonly KpisContext _context;
         private readonly PermissionService _permissionService;
+        private readonly IConfiguration _configuration;
 
-        public ProductionDataController(KpisContext context, PermissionService permissionService)
+        public ProductionDataController(KpisContext context, PermissionService permissionService, IConfiguration configuration)
         {
             _context = context;
             _permissionService = permissionService;
+            _configuration = configuration;
         }
 
         // GET: ProductionData
@@ -66,7 +68,7 @@ namespace GDIKPI.Controllers
                     return Json(new List<object>());
 
                 using var client = new HttpClient();
-                client.BaseAddress = new Uri("http://192.168.1.1:9091");
+                client.BaseAddress = new Uri((_configuration["ExternalApi:BaseUrl"] ?? "http://localhost:9091").TrimEnd('/') + "/");
                 client.Timeout = TimeSpan.FromSeconds(30);
 
                 var response = await client.GetAsync($"/GetProgram?area={Uri.EscapeDataString(areaName)}");

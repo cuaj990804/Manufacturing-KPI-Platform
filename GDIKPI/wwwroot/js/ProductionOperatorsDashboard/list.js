@@ -13,8 +13,50 @@ $(document).ready(function () {
     let historyChartInstance = null;
     let isExporting = false;
     let employeeSuggestionsTimer = null;
+    let managedProductionLines = [];
+    let hiddenProductionStatsLineIds = new Set();
+    let productionDashboardSyncConnection = null;
+    let productionDashboardSyncTimer = null;
     const isTabletViewport = window.matchMedia('(min-width: 768px) and (max-width: 1180px)').matches;
     const employeeSuggestionsList = $('#employeeFilterOptions');
+
+    function getSelectedAreaId() {
+        const value = $('#areaFilter').val() || '';
+        const parsed = Number(value);
+        return parsed > 0 ? parsed : null;
+    }
+
+    function getSelectedLineId() {
+        const value = $('#lineFilter').val() || '';
+        const parsed = Number(value);
+        return parsed > 0 ? parsed : null;
+    }
+
+    function appendQueryParam(url, key, value) {
+        if (!value) {
+            return url;
+        }
+
+        const separator = url.indexOf('?') >= 0 ? '&' : '?';
+        return url + separator + encodeURIComponent(key) + '=' + encodeURIComponent(value);
+    }
+
+    function withAreaParam(url) {
+        var scopedUrl = appendQueryParam(url, 'areaId', getSelectedAreaId());
+        scopedUrl = appendQueryParam(scopedUrl, 'productionLinesId', getSelectedLineId());
+        return scopedUrl;
+    }
+
+    function updateScanProductionLink() {
+        var url = '/ProductionOperators';
+        var areaId = getSelectedAreaId();
+
+        if (areaId) {
+            url = appendQueryParam(url, 'areaId', areaId);
+        }
+
+        $('#btnScanProduction').attr('href', url);
+    }
 
     function renderEmployeeSuggestions(items) {
         if (!employeeSuggestionsList.length) {
@@ -36,7 +78,7 @@ $(document).ready(function () {
     function loadEmployeeSuggestions() {
         const term = ($('#employeeFilter').val() || '').trim();
 
-        fetch(`/api/ProductionOperatorsDashboardApi/operators?term=${encodeURIComponent(term)}`)
+        fetch(withAreaParam(`/api/ProductionOperatorsDashboardApi/operators?term=${encodeURIComponent(term)}`))
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(renderEmployeeSuggestions)
             .catch(() => renderEmployeeSuggestions([]));
@@ -239,7 +281,7 @@ $(document).ready(function () {
                             },
                             title: {
                                 display: true,
-                                text: response.chartTitle || 'Historial de escaneos'
+                                text: response.chartTitle || 'Historial de producción'
                             },
                             tooltip: {
                                 callbacks: {
@@ -315,6 +357,8 @@ $(document).ready(function () {
                 // The backend API expects time interval parameters; they were previously omitted.
                 d.startTimeFilter = filters.startTimeFilter;
                 d.endTimeFilter = filters.endTimeFilter;
+                d.areaId = filters.areaId;
+                d.productionLinesId = filters.productionLinesId;
             },
             dataSrc: function (json) {
                 return json.data;
@@ -366,7 +410,13 @@ $(document).ready(function () {
                 className: 'text-center',
                 render: function (data, type) {
                     if (type !== 'display') return data;
-                    return '<button class="btn btn-sm btn-outline-primary btn-edit-scan" data-scan-id="' + data.id + '" title="Editar escaneo"><i class="fas fa-pen"></i></button>';
+                    if (!data.canEdit) {
+                        return '<button class="btn btn-sm btn-outline-danger btn-delete-scan" data-scan-id="' + data.id + '" data-source="LINE" title="Eliminar escaneo de linea"><i class="fas fa-trash"></i></button>';
+                    }
+                    return '<div class="btn-group btn-group-sm" role="group">' +
+                        '<button class="btn btn-outline-primary btn-edit-scan" data-scan-id="' + data.id + '" title="Editar escaneo"><i class="fas fa-pen"></i></button>' +
+                        '<button class="btn btn-outline-danger btn-delete-scan" data-scan-id="' + data.id + '" data-source="OPERATOR" title="Eliminar escaneo"><i class="fas fa-trash"></i></button>' +
+                        '</div>';
                 }
             }
         ],
@@ -375,10 +425,193 @@ $(document).ready(function () {
         }
     });
 
+    function escapeHtml(value) {
+        return String(value || '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    const auditLogsTable = $('#OperatorsAuditTable').DataTable({
+        ordering: true,
+        searching: false,
+        dom: 'rtip',
+        order: [[0, 'desc'], [1, 'desc']],
+        processing: true,
+        serverSide: true,
+        pageLength: isTabletViewport ? 5 : 10,
+        ajax: {
+            url: '/api/ProductionOperatorsDashboardApi/audit-logs',
+            type: 'POST',
+            data: function (d) {
+                const filters = getCurrentFilters();
+                d.startDateFilter = filters.startDateFilter;
+                d.endDateFilter = filters.endDateFilter;
+                d.actionFilter = $('#auditActionFilter').val();
+                d.userFilter = $('#auditUserFilter').val();
+                d.employeeFilter = $('#auditEmployeeFilter').val();
+                d.codeFilter = $('#auditCodeFilter').val();
+                d.detailFilter = $('#auditSearchFilter').val();
+            },
+            dataSrc: function (json) {
+                return json.data;
+            },
+            error: function (xhr, error, code) {
+                console.error('Operators audit log table error:', error, code, xhr.responseText);
+            }
+        },
+        columns: [
+            {
+                data: 'logDate',
+                orderable: true,
+                render: function (data, type) {
+                    if (type !== 'display') return data;
+                    return data ? data.split('-').reverse().join('/') : '';
+                }
+            },
+            {
+                data: 'logTime',
+                orderable: true,
+                render: function (data) {
+                    return data || '';
+                }
+            },
+            {
+                data: 'employeeNumber',
+                className: 'text-center',
+                orderable: true,
+                render: function (data) {
+                    return escapeHtml(data);
+                }
+            },
+            {
+                data: 'affectedEmployee',
+                className: 'text-center',
+                orderable: false,
+                render: function (data) {
+                    return escapeHtml(data);
+                }
+            },
+            {
+                data: 'pieceCode',
+                orderable: false,
+                render: function (data) {
+                    return escapeHtml(data);
+                }
+            },
+            {
+                data: 'actionType',
+                orderable: true,
+                render: function (data) {
+                    const action = data || '';
+                    const labelMap = {
+                        CREATE: 'Guardado',
+                        REJECTED: 'Rechazado',
+                        UPDATE: 'Actualizado',
+                        ADD_MANUAL_PIECES: 'Piezas manuales',
+                        DEACTIVATE: 'Desactivado'
+                    };
+                    const classMap = {
+                        CREATE: 'bg-success',
+                        REJECTED: 'bg-danger',
+                        UPDATE: 'bg-primary',
+                        ADD_MANUAL_PIECES: 'bg-info text-dark',
+                        DEACTIVATE: 'bg-secondary'
+                    };
+
+                    return `<span class="badge ${classMap[action] || 'bg-dark'}">${escapeHtml(labelMap[action] || action)}</span>`;
+                }
+            },
+            {
+                data: 'entityName',
+                orderable: true,
+                render: function (data) {
+                    const labelMap = {
+                        ProductionOperator: 'Operador',
+                        ProductionOperatorsScan: 'Escaneo',
+                        ProductionOperatorsScanAttempt: 'Intento'
+                    };
+
+                    return escapeHtml(labelMap[data] || data);
+                }
+            },
+            {
+                data: 'entityId',
+                className: 'text-center',
+                orderable: true,
+                render: function (data) {
+                    return escapeHtml(data);
+                }
+            },
+            {
+                data: 'details',
+                orderable: false,
+                className: 'audit-details-cell',
+                render: function (data) {
+                    return escapeHtml(data);
+                }
+            }
+        ]
+    });
+
     function attachEditHandlers() {
         $('.btn-edit-scan').off('click').on('click', function () {
             var scanId = $(this).data('scan-id');
             openScanEditModal(scanId);
+        });
+
+        $('.btn-delete-scan').off('click').on('click', function () {
+            var scanId = $(this).data('scan-id');
+            var source = $(this).data('source') || 'OPERATOR';
+            deleteDashboardScan(scanId, source);
+        });
+    }
+
+    function deleteDashboardScan(scanId, source) {
+        if (!scanId) return;
+
+        var isLineScan = String(source).toUpperCase() === 'LINE';
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Eliminar escaneo',
+            text: isLineScan
+                ? 'Se eliminara el escaneo y se descontara una pieza de la produccion de la linea.'
+                : 'Esta accion eliminara permanentemente el escaneo del operador.',
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545'
+        }).then(function (confirmation) {
+            if (!confirmation.isConfirmed) return;
+
+            fetch('/api/ProductionOperatorsDashboardApi/scan/' + scanId + '?source=' + encodeURIComponent(source), {
+                method: 'DELETE'
+            })
+                .then(async function (response) {
+                    var result = await response.json().catch(function () { return {}; });
+                    if (!response.ok) {
+                        throw new Error(result.message || 'No se pudo eliminar el escaneo');
+                    }
+                    return result;
+                })
+                .then(function (result) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Escaneo eliminado',
+                        text: result.message,
+                        timer: 1500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                    reloadDashboard();
+                })
+                .catch(function (error) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+                });
         });
     }
 
@@ -387,10 +620,77 @@ $(document).ready(function () {
         loadChart();
         loadHistoryChart();
         scansTable.ajax.reload();
+        auditLogsTable.ajax.reload();
     }
+
+    function scheduleSynchronizedDashboardReload() {
+        clearTimeout(productionDashboardSyncTimer);
+        productionDashboardSyncTimer = setTimeout(reloadDashboard, 300);
+    }
+
+    async function initializeProductionDashboardSync() {
+        if (typeof signalR === 'undefined') {
+            console.warn('SignalR no está disponible para actualizar las gráficas.');
+            return;
+        }
+
+        productionDashboardSyncConnection = new signalR.HubConnectionBuilder()
+            .withUrl('/dashboardHub')
+            .withAutomaticReconnect([0, 2000, 5000, 10000])
+            .build();
+
+        productionDashboardSyncConnection.on(
+            'ProductionDataUpdated',
+            scheduleSynchronizedDashboardReload);
+        productionDashboardSyncConnection.on(
+            'ProductionLinesScannerUpdated',
+            scheduleSynchronizedDashboardReload);
+        productionDashboardSyncConnection.on(
+            'OperatorStatsUpdated',
+            scheduleSynchronizedDashboardReload);
+        productionDashboardSyncConnection.onreconnected(scheduleSynchronizedDashboardReload);
+
+        try {
+            await productionDashboardSyncConnection.start();
+        } catch (error) {
+            console.error('No se pudo iniciar la actualización de gráficas:', error);
+            setTimeout(initializeProductionDashboardSync, 5000);
+        }
+    }
+
+    initializeProductionDashboardSync();
 
     // Refresh data when any filter, including time range, changes.
     $('#operationFilter, #startDateFilter, #endDateFilter, #startTimeFilter, #endTimeFilter').on('change', reloadDashboard);
+    $('#auditActionFilter').on('change', function () {
+        auditLogsTable.ajax.reload();
+    });
+
+    let auditSearchTimer = null;
+    $('#auditUserFilter, #auditEmployeeFilter, #auditCodeFilter, #auditSearchFilter').on('input', function () {
+        clearTimeout(auditSearchTimer);
+        auditSearchTimer = setTimeout(function () {
+            auditLogsTable.ajax.reload();
+        }, 300);
+    });
+
+    $('#areaFilter').on('change', function () {
+        $('#lineFilter').val('');
+        loadLineOptions(getSelectedAreaId(), null, '#lineFilter', 'Todas')
+            .finally(function () {
+                updateScanProductionLink();
+                loadOperationOptions();
+                loadEmployeeSuggestions();
+                reloadDashboard();
+            });
+    });
+
+    $('#lineFilter').on('change', function () {
+        loadOperationOptions();
+        loadEmployeeSuggestions();
+        updateScanProductionLink();
+        reloadDashboard();
+    });
 
     $('#employeeFilter').on('input', function () {
         clearTimeout(employeeSuggestionsTimer);
@@ -479,6 +779,270 @@ $(document).ready(function () {
             });
     });
 
+    function loadManualPiecesEmployeeSuggestions() {
+        var term = ($('#manualPiecesEmployee').val() || '').trim();
+
+        fetch(withAreaParam('/api/ProductionOperatorsDashboardApi/operators?term=' + encodeURIComponent(term)))
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(function (items) {
+                var list = $('#manualPiecesEmployeeOptions');
+                list.empty();
+                (items || []).forEach(function (item) {
+                    var label = item.label || '';
+                    if (label) {
+                        $('<option>', { value: label }).appendTo(list);
+                    }
+                });
+            })
+            .catch(function () {});
+    }
+
+    function openManualPiecesModal() {
+        var now = new Date();
+        var todayValue = now.toISOString().slice(0, 10);
+        var timeValue = now.toTimeString().slice(0, 5);
+
+        $('#manualPiecesForm')[0].reset();
+        $('#manualPiecesForm').removeClass('was-validated');
+        $('#manualPiecesEmployee').removeClass('is-invalid').data('employee-number', '');
+        $('#manualPiecesQuantity').val(1);
+        $('#manualPiecesDate').val(todayValue);
+        $('#manualPiecesTime').val(timeValue);
+        loadManualPiecesEmployeeSuggestions();
+        $('#manualPiecesModal').modal('show');
+        setTimeout(function () {
+            $('#manualPiecesEmployee').trigger('focus');
+        }, 200);
+    }
+
+    $('#btnAddManualPieces').on('click', function () {
+        openManualPiecesModal();
+    });
+
+    function loadManualLineProductionOptions() {
+        var select = $('#manualLineProductionLine');
+        var selectedLineId = getSelectedLineId();
+        var url = appendQueryParam(
+            '/api/ProductionOperatorsDashboardApi/production-lines/manage',
+            'areaId',
+            getSelectedAreaId()
+        );
+
+        select.prop('disabled', true).html('<option value="">Cargando lineas...</option>');
+
+        return fetch(url)
+            .then(function (response) {
+                return response.ok ? response.json() : Promise.reject(response);
+            })
+            .then(function (lines) {
+                select.empty().append('<option value="">Seleccione una linea</option>');
+
+                (lines || [])
+                    .filter(function (line) { return line.isActive !== false; })
+                    .forEach(function (line) {
+                        var areaLabel = [line.customerName, line.areaName].filter(Boolean).join(' - ');
+                        var lineLabel = line.lineName || ('Linea ' + line.lineNumber);
+                        var label = areaLabel ? lineLabel + ' - ' + areaLabel : lineLabel;
+                        $('<option>', {
+                            value: line.productionLinesId,
+                            text: label
+                        }).appendTo(select);
+                    });
+
+                if (selectedLineId) {
+                    select.val(String(selectedLineId));
+                }
+            })
+            .catch(function () {
+                select.html('<option value="">No se pudieron cargar las lineas</option>');
+            })
+            .finally(function () {
+                select.prop('disabled', false);
+            });
+    }
+
+    function openManualLineProductionModal() {
+        var now = new Date();
+        var localDate = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0');
+        var localTime = String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0');
+
+        $('#manualLineProductionForm')[0].reset();
+        $('#manualLineProductionForm').removeClass('was-validated');
+        $('#manualLineProductionQuantity').val(1);
+        $('#manualLineProductionDate').val(localDate);
+        $('#manualLineProductionTime').val(localTime);
+        loadManualLineProductionOptions();
+
+        var modalElement = document.getElementById('manualLineProductionModal');
+        if (!modalElement || typeof bootstrap === 'undefined') {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo abrir el modal' });
+            return;
+        }
+
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
+
+    $('#btnAddLineProduction').on('click', openManualLineProductionModal);
+
+    $('#manualLineProductionForm').on('submit', function (event) {
+        event.preventDefault();
+
+        if (!this.checkValidity()) {
+            $(this).addClass('was-validated');
+            return;
+        }
+
+        var payload = {
+            productionLinesId: parseInt($('#manualLineProductionLine').val(), 10),
+            quantity: parseInt($('#manualLineProductionQuantity').val(), 10),
+            producedAt: $('#manualLineProductionDate').val() + 'T' +
+                $('#manualLineProductionTime').val() + ':00',
+            areaId: getSelectedAreaId()
+        };
+
+        var saveButton = $('#btnSaveManualLineProduction');
+        saveButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Guardando...');
+
+        fetch('/api/ProductionOperatorsDashboardApi/manual-line-production', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(async function (response) {
+                var result = await response.json().catch(function () { return {}; });
+                if (!response.ok) {
+                    throw new Error(result.message || 'No se pudo agregar la produccion');
+                }
+                return result;
+            })
+            .then(function (result) {
+                var modalElement = document.getElementById('manualLineProductionModal');
+                bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Produccion agregada',
+                    text: result.message,
+                    timer: 1800,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+                reloadDashboard();
+            })
+            .catch(function (error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+            })
+            .finally(function () {
+                saveButton.prop('disabled', false).html('<i class="fas fa-save me-1"></i>Guardar');
+            });
+    });
+
+    $('#manualPiecesEmployee').on('input', function () {
+        var val = $(this).val();
+        var label = $(this).data('label') || '';
+        if (val !== label) {
+            $(this).data('employee-number', '');
+        }
+        loadManualPiecesEmployeeSuggestions();
+    });
+
+    $('#manualPiecesEmployee').on('focus', loadManualPiecesEmployeeSuggestions);
+
+    $('#manualPiecesEmployee').on('change', function () {
+        var val = $(this).val().trim();
+        var match = val.match(/^(\d+)/);
+        if (match) {
+            $(this).data('employee-number', parseInt(match[1], 10));
+            $(this).data('label', val);
+            $(this).removeClass('is-invalid');
+        } else {
+            $(this).data('employee-number', '');
+        }
+    });
+
+    $('#manualPiecesForm').on('submit', function (e) {
+        e.preventDefault();
+
+        if (!this.checkValidity()) {
+            $(this).addClass('was-validated');
+            return;
+        }
+
+        var employeeNumber = $('#manualPiecesEmployee').data('employee-number');
+        if (!employeeNumber) {
+            var match = ($('#manualPiecesEmployee').val() || '').trim().match(/^(\d+)/);
+            employeeNumber = match ? parseInt(match[1], 10) : null;
+        }
+
+        if (!employeeNumber) {
+            $('#manualPiecesEmployee').addClass('is-invalid');
+            return;
+        }
+
+        var quantity = parseInt($('#manualPiecesQuantity').val(), 10);
+        var dateVal = $('#manualPiecesDate').val();
+        var timeVal = $('#manualPiecesTime').val() || '00:00';
+
+        var payload = {
+            employeeNumber: employeeNumber,
+            code: $('#manualPiecesCode').val().trim() || null,
+            quantity: quantity,
+            scannedAt: dateVal + 'T' + timeVal + ':00',
+            areaId: getSelectedAreaId(),
+            productionLinesId: getSelectedLineId()
+        };
+
+        $('#btnSaveManualPieces').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Guardando...');
+
+        fetch('/api/ProductionOperatorsDashboardApi/manual-pieces', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(async response => {
+                if (!response.ok) {
+                    let message = 'No se pudieron agregar las piezas';
+
+                    try {
+                        const errorData = await response.json();
+                        message = errorData.message || message;
+                    } catch {
+                        // Response was not JSON.
+                    }
+
+                    throw new Error(message);
+                }
+
+                return response.json();
+            })
+            .then(function (result) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Piezas agregadas',
+                    text: result.message || 'Se agregaron correctamente.',
+                    timer: 1800,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+                $('#manualPiecesModal').modal('hide');
+                reloadDashboard();
+            })
+            .catch(function (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'No se pudieron agregar las piezas'
+                });
+            })
+            .finally(function () {
+                $('#btnSaveManualPieces').prop('disabled', false).html('<i class="fas fa-save me-1"></i>Guardar');
+            });
+    });
+
     function getCurrentFilters() {
         return {
             operationFilter: $('#operationFilter').val(),
@@ -487,57 +1051,358 @@ $(document).ready(function () {
             endDateFilter: $('#endDateFilter').val(),
 
             startTimeFilter: $('#startTimeFilter').val(),
-            endTimeFilter: $('#endTimeFilter').val()
+            endTimeFilter: $('#endTimeFilter').val(),
+            areaId: getSelectedAreaId(),
+            productionLinesId: getSelectedLineId()
         };
     }
 
     function loadAreaOptions() {
-        fetch('/api/ProductionOperatorsDashboardApi/areas')
+        return fetch('/api/ProductionOperatorsDashboardApi/areas')
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(areas => {
-                var select = $('#opArea');
-                select.empty().append('<option value="">Seleccione un area</option>');
+                var filterSelect = $('#areaFilter');
+                var operatorSelect = $('#opArea');
+                var productionLineSelect = $('#productionLineArea');
+
+                filterSelect.empty().append('<option value="">Todas</option>');
+                operatorSelect.empty().append('<option value="">Seleccione un area</option>');
+                productionLineSelect.empty().append('<option value="">Seleccione un area</option>');
+
                 (areas || []).forEach(function (a) {
                     var label = a.areaName;
                     if (a.customerName) { label += ' - ' + a.customerName; }
-                    select.append('<option value="' + a.areaId + '">' + label + '</option>');
+                    filterSelect.append('<option value="' + a.areaId + '">' + label + '</option>');
+                    operatorSelect.append('<option value="' + a.areaId + '">' + label + '</option>');
+                    productionLineSelect.append('<option value="' + a.areaId + '">' + label + '</option>');
                 });
+
+                return loadLineOptions(getSelectedAreaId(), null, '#lineFilter', 'Todas');
+            })
+            .then(updateScanProductionLink)
+            .catch(function () {});
+    }
+
+    function getLineLabel(line, includeArea) {
+        var label = line.lineName || (line.lineNumber ? 'Linea ' + line.lineNumber : 'Linea ' + line.productionLinesId);
+
+        if (!line.lineName && line.lineNumber) {
+            label = 'Linea ' + line.lineNumber;
+        }
+
+        if (includeArea) {
+            var areaLabel = [line.customerName, line.areaName].filter(Boolean).join(' - ');
+            if (areaLabel) {
+                label = areaLabel + ' / ' + label;
+            }
+        }
+
+        return label;
+    }
+
+    function loadLineOptions(areaId, selectedLineId, targetSelector, emptyText) {
+        var select = $(targetSelector || '#opLine');
+        select.empty().append('<option value="">' + (emptyText || 'Seleccione una linea') + '</option>');
+
+        var url = '/api/ProductionOperatorsDashboardApi/production-lines';
+        if (areaId) {
+            url = appendQueryParam(url, 'areaId', areaId);
+        }
+
+        return fetch(url)
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(lines => {
+                (lines || []).forEach(function (line) {
+                    select.append('<option value="' + line.productionLinesId + '">' + getLineLabel(line, !areaId) + '</option>');
+                });
+
+                if (selectedLineId) {
+                    select.val(selectedLineId);
+                }
             })
             .catch(function () {});
     }
 
     function loadOperationOptions() {
-        fetch('/api/ProductionOperatorsDashboardApi/operations')
+        fetch(withAreaParam('/api/ProductionOperatorsDashboardApi/operations'))
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(operations => {
                 var datalist = $('#operationOptions');
+                var operationFilter = $('#operationFilter');
+                var currentOperation = operationFilter.val() || '';
+
                 datalist.empty();
+                operationFilter.empty().append('<option value="">Todas</option>');
+
                 (operations || []).forEach(function (op) {
                     datalist.append('<option value="' + op + '">');
+                    operationFilter.append('<option value="' + op + '">' + op + '</option>');
                 });
+
+                if (currentOperation) {
+                    operationFilter.val(currentOperation);
+                    if (operationFilter.val() !== currentOperation) {
+                        operationFilter.val('');
+                    }
+                }
             })
             .catch(function () {});
     }
 
-    function loadOperatorList() {
-        $('#operatorListBody').html('<tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr>');
+    function renderProductionLineList(lines) {
+        managedProductionLines = lines || [];
 
-        fetch('/api/ProductionOperatorsDashboardApi/operators/list')
+        if (!managedProductionLines.length) {
+            $('#productionLineListBody').html('<tr><td colspan="8" class="text-center text-muted py-3">No hay lineas registradas</td></tr>');
+            return;
+        }
+
+        var html = '';
+        managedProductionLines.forEach(function (line) {
+            var areaLabel = [line.customerName, line.areaName].filter(Boolean).join(' - ') || '-';
+            var stateBadge = line.isActive
+                ? '<span class="badge bg-success">Activa</span>'
+                : '<span class="badge bg-secondary">Inactiva</span>';
+            var isVisibleInCard = !hiddenProductionStatsLineIds.has(Number(line.productionLinesId));
+
+            html += '<tr>' +
+                '<td>' + escapeHtml(areaLabel) + '</td>' +
+                '<td>' + escapeHtml(line.lineNumber == null ? '-' : line.lineNumber) + '</td>' +
+                '<td>' + escapeHtml(line.lineName || '-') + '</td>' +
+                '<td class="text-end">' + escapeHtml(line.dailyGoal == null ? '-' : line.dailyGoal) + '</td>' +
+                '<td class="text-end">' + escapeHtml(line.personalQuantity == null ? '-' : line.personalQuantity) + '</td>' +
+                '<td class="text-center">' + stateBadge + '</td>' +
+                '<td class="text-center"><div class="form-check form-switch d-inline-block m-0"><input type="checkbox" class="form-check-input production-stats-visibility-toggle" data-id="' + line.productionLinesId + '" aria-label="Mostrar linea en la card" ' + (isVisibleInCard ? 'checked' : '') + '></div></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-primary btn-edit-production-line" data-id="' + line.productionLinesId + '" title="Editar"><i class="fas fa-pen"></i></button></td>' +
+                '</tr>';
+        });
+
+        $('#productionLineListBody').html(html);
+    }
+
+    function loadProductionLineManagementList() {
+        $('#productionLineListBody').html('<tr><td colspan="8" class="text-center text-muted py-3">Cargando...</td></tr>');
+        var url = '/api/ProductionOperatorsDashboardApi/production-lines/manage';
+        url = appendQueryParam(url, 'areaId', getSelectedAreaId());
+
+        return Promise.all([
+            fetch(url).then(function (response) {
+                return response.ok ? response.json() : Promise.reject(response);
+            }),
+            fetch('/api/DashboardProductionVisibility').then(function (response) {
+                return response.ok ? response.json() : Promise.reject(response);
+            })
+        ])
+            .then(function (results) {
+                var visibility = results[1] || {};
+                hiddenProductionStatsLineIds = new Set(
+                    (visibility.hiddenCardKeys || [])
+                        .filter(function (key) { return String(key).indexOf('production-line-item:') === 0; })
+                        .map(function (key) { return Number(String(key).substring('production-line-item:'.length)); })
+                        .filter(function (lineId) { return lineId > 0; })
+                );
+                renderProductionLineList(results[0]);
+            })
+            .catch(function () {
+                managedProductionLines = [];
+                $('#productionLineListBody').html('<tr><td colspan="8" class="text-center text-danger py-3">No se pudieron cargar las lineas</td></tr>');
+            });
+    }
+
+    function showProductionLineList() {
+        $('#productionLineFormView').hide();
+        $('#productionLineListView').show();
+        $('#btnSaveProductionLine').hide();
+        loadProductionLineManagementList();
+    }
+
+    function showProductionLineForm(productionLinesId) {
+        $('#productionLineListView').hide();
+        $('#productionLineFormView').show();
+        $('#btnSaveProductionLine').show();
+        $('#productionLineForm')[0].reset();
+        $('#productionLineForm').removeClass('was-validated');
+        $('#productionLineId').val('');
+        $('#productionLineActive').prop('checked', true);
+        $('#productionLineArea').prop('disabled', false).val(getSelectedAreaId() || '');
+
+        if (!productionLinesId) {
+            return;
+        }
+
+        var line = managedProductionLines.find(function (item) {
+            return Number(item.productionLinesId) === Number(productionLinesId);
+        });
+
+        if (!line) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se encontro la linea seleccionada' });
+            showProductionLineList();
+            return;
+        }
+
+        $('#productionLineId').val(line.productionLinesId);
+        $('#productionLineArea').val(line.areaId || '').prop('disabled', true);
+        $('#productionLineNumber').val(line.lineNumber || '');
+        $('#productionLineName').val(line.lineName || '');
+        $('#productionLineGoal').val(line.dailyGoal || '');
+        $('#productionLinePeople').val(line.personalQuantity || '');
+        $('#productionLineStandardTime').val(line.standardTime == null ? '' : line.standardTime);
+        $('#productionLineActive').prop('checked', line.isActive !== false);
+    }
+
+    $('#btnManageLines').on('click', function () {
+        showProductionLineList();
+        var modalElement = document.getElementById('productionLineModal');
+        if (!modalElement || typeof bootstrap === 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo abrir la gestion de lineas'
+            });
+            return;
+        }
+
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    });
+
+    $('#btnNewProductionLine').on('click', function () {
+        showProductionLineForm(null);
+    });
+
+    $('#btnBackToProductionLineList').on('click', function (event) {
+        event.preventDefault();
+        showProductionLineList();
+    });
+
+    $(document).on('click', '.btn-edit-production-line', function () {
+        showProductionLineForm($(this).data('id'));
+    });
+
+    $(document).on('change', '.production-stats-visibility-toggle', function () {
+        var toggle = $(this);
+        var lineId = Number(toggle.data('id'));
+        var isVisible = toggle.is(':checked');
+
+        toggle.prop('disabled', true);
+
+        fetch('/api/DashboardProductionVisibility/card', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cardKey: 'production-line-item:' + lineId,
+                isVisible: isVisible
+            })
+        })
+            .then(async function (response) {
+                if (!response.ok) {
+                    var result = await response.json().catch(function () { return {}; });
+                    throw new Error(result.error || 'No se pudo actualizar la visibilidad');
+                }
+
+                if (isVisible) {
+                    hiddenProductionStatsLineIds.delete(lineId);
+                } else {
+                    hiddenProductionStatsLineIds.add(lineId);
+                }
+            })
+            .catch(function (error) {
+                toggle.prop('checked', !isVisible);
+                Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+            })
+            .finally(function () {
+                toggle.prop('disabled', false);
+            });
+    });
+
+    $('#productionLineSearchInput').on('input', function () {
+        var search = ($(this).val() || '').toLowerCase().trim();
+        $('#productionLineListBody tr').each(function () {
+            $(this).toggle($(this).text().toLowerCase().indexOf(search) >= 0);
+        });
+    });
+
+    $('#productionLineForm').on('submit', function (event) {
+        event.preventDefault();
+
+        if (!this.checkValidity()) {
+            $(this).addClass('was-validated');
+            return;
+        }
+
+        var standardTimeValue = $('#productionLineStandardTime').val();
+        var payload = {
+            productionLinesId: $('#productionLineId').val() ? parseInt($('#productionLineId').val(), 10) : null,
+            areaId: parseInt($('#productionLineArea').val(), 10),
+            lineNumber: parseInt($('#productionLineNumber').val(), 10),
+            lineName: ($('#productionLineName').val() || '').trim() || null,
+            dailyGoal: parseInt($('#productionLineGoal').val(), 10),
+            personalQuantity: parseInt($('#productionLinePeople').val(), 10),
+            standardTime: standardTimeValue === '' ? null : parseFloat(standardTimeValue),
+            isActive: $('#productionLineActive').is(':checked')
+        };
+
+        $('#btnSaveProductionLine').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Guardando...');
+
+        fetch('/api/ProductionOperatorsDashboardApi/save-production-line', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(async function (response) {
+                var result = await response.json().catch(function () { return {}; });
+                if (!response.ok) {
+                    throw new Error(result.message || 'No se pudo guardar la linea');
+                }
+                return result;
+            })
+            .then(function () {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Linea guardada',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+
+                showProductionLineList();
+                return loadLineOptions(getSelectedAreaId(), getSelectedLineId(), '#lineFilter', 'Todas');
+            })
+            .then(function () {
+                loadOperationOptions();
+                reloadDashboard();
+            })
+            .catch(function (error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'No se pudo guardar la linea' });
+            })
+            .finally(function () {
+                $('#btnSaveProductionLine').prop('disabled', false).html('<i class="fas fa-save me-1"></i>Guardar');
+            });
+    });
+
+    function loadOperatorList() {
+        $('#operatorListBody').html('<tr><td colspan="7" class="text-center text-muted py-3">Cargando...</td></tr>');
+
+        fetch(withAreaParam('/api/ProductionOperatorsDashboardApi/operators/list'))
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(function (operators) {
                 if (!operators || !operators.length) {
-                    $('#operatorListBody').html('<tr><td colspan="5" class="text-center text-muted py-3">No hay operadores registrados</td></tr>');
+                    $('#operatorListBody').html('<tr><td colspan="7" class="text-center text-muted py-3">No hay operadores registrados</td></tr>');
                     return;
                 }
                 var html = '';
                 (operators || []).forEach(function (op) {
                     var fullName = (op.nameOperator || '') + ' ' + (op.lastnameOperator || '');
+                    var areaLabel = [op.customerName, op.areaName].filter(Boolean).join(' - ') || '-';
+                    var lineLabel = op.lineName || (op.lineNumber ? 'Linea ' + op.lineNumber : '-');
                     var activeBadge = op.active !== false
                         ? '<span class="badge bg-success">Si</span>'
                         : '<span class="badge bg-danger">No</span>';
                     html += '<tr>' +
                         '<td>' + op.employeeNumber + '</td>' +
                         '<td>' + fullName.trim() + '</td>' +
+                        '<td>' + areaLabel + '</td>' +
+                        '<td>' + lineLabel + '</td>' +
                         '<td>' + (op.operation || '-') + '</td>' +
                         '<td class="text-center">' + activeBadge + '</td>' +
                         '<td class="text-center">' +
@@ -548,7 +1413,7 @@ $(document).ready(function () {
                 $('#operatorListBody').html(html);
             })
             .catch(function () {
-                $('#operatorListBody').html('<tr><td colspan="5" class="text-center text-danger py-3">Error al cargar operadores</td></tr>');
+                $('#operatorListBody').html('<tr><td colspan="7" class="text-center text-danger py-3">Error al cargar operadores</td></tr>');
             });
     }
 
@@ -565,13 +1430,22 @@ $(document).ready(function () {
         $('#editOperatorId').val('');
         $('#operatorForm')[0].reset();
         $('#opActive').prop('checked', true);
+        var selectedAreaId = getSelectedAreaId();
+        var selectedLineId = getSelectedLineId();
+        if (selectedAreaId) {
+            $('#opArea').val(String(selectedAreaId)).prop('disabled', false);
+            loadLineOptions(selectedAreaId, selectedLineId);
+        } else {
+            $('#opArea').prop('disabled', false);
+            loadLineOptions(null);
+        }
         $('.is-invalid').removeClass('is-invalid');
 
         if (employeeNumber) {
             $('#btnDeleteOperator').show().data('employee', employeeNumber);
             $('#btnSaveOperator').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Cargando...');
 
-            fetch('/api/ProductionOperatorsDashboardApi/operator/' + employeeNumber)
+            fetch(withAreaParam('/api/ProductionOperatorsDashboardApi/operator/' + employeeNumber))
                 .then(response => response.ok ? response.json() : Promise.reject(response))
                 .then(function (op) {
                     $('#editOperatorId').val(op.operatorId || '');
@@ -582,7 +1456,10 @@ $(document).ready(function () {
                     $('#opOperation').val(op.operation || '');
                     $('#opGoal').val(op.goal || '');
                     $('#opActive').prop('checked', op.active !== false);
-                    $('#btnSaveOperator').prop('disabled', false).html('<i class="fas fa-save me-1"></i>Guardar');
+                    loadLineOptions(op.areaId || '', op.productionLinesId || '')
+                        .finally(function () {
+                            $('#btnSaveOperator').prop('disabled', false).html('<i class="fas fa-save me-1"></i>Guardar');
+                        });
                 })
                 .catch(function () {
                     Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la informacion del operador' });
@@ -592,6 +1469,10 @@ $(document).ready(function () {
             $('#btnDeleteOperator').hide();
         }
     }
+
+    $('#opArea').on('change', function () {
+        loadLineOptions($(this).val(), null);
+    });
 
     function openOperatorModal(employeeNumber) {
         if (employeeNumber) {
@@ -711,6 +1592,7 @@ $(document).ready(function () {
             nameOperator: $('#opName').val().trim().toUpperCase(),
             lastnameOperator: $('#opLastname').val().trim().toUpperCase(),
             areaId: $('#opArea').val() ? parseInt($('#opArea').val(), 10) : null,
+            productionLinesId: $('#opLine').val() ? parseInt($('#opLine').val(), 10) : null,
             operation: $('#opOperation').val().trim() || null,
             goal: $('#opGoal').val() ? parseInt($('#opGoal').val(), 10) : null,
             active: $('#opActive').is(':checked')
@@ -750,7 +1632,7 @@ $(document).ready(function () {
     function loadEditScanEmployeeSuggestions() {
         var term = ($('#editScanEmployee').val() || '').trim();
 
-        fetch('/api/ProductionOperatorsDashboardApi/operators?term=' + encodeURIComponent(term))
+        fetch(withAreaParam('/api/ProductionOperatorsDashboardApi/operators?term=' + encodeURIComponent(term)))
             .then(response => response.ok ? response.json() : Promise.reject(response))
             .then(function (items) {
                 var list = $('#editScanEmployeeOptions');
@@ -788,7 +1670,8 @@ $(document).ready(function () {
                 }
 
                 $('#btnSaveScanEdit').prop('disabled', false).html('<i class="fas fa-save me-1"></i>Guardar');
-                $('#scanEditModal').modal('show');
+                var modalElement = document.getElementById('scanEditModal');
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
             })
             .catch(function () {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la informacion del escaneo' });
@@ -842,7 +1725,9 @@ $(document).ready(function () {
         var payload = {
             employeeNumber: employeeNumber,
             code: $('#editScanCode').val().trim(),
-            scannedAt: scannedAt
+            scannedAt: scannedAt,
+            areaId: getSelectedAreaId(),
+            productionLinesId: getSelectedLineId()
         };
 
         $('#btnSaveScanEdit').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Guardando...');
@@ -862,7 +1747,8 @@ $(document).ready(function () {
                     toast: true,
                     position: 'top-end'
                 });
-                $('#scanEditModal').modal('hide');
+                var modalElement = document.getElementById('scanEditModal');
+                bootstrap.Modal.getOrCreateInstance(modalElement).hide();
                 reloadDashboard();
             })
             .catch(function () {
@@ -873,10 +1759,10 @@ $(document).ready(function () {
             });
     });
 
-    loadAreaOptions();
-    loadOperationOptions();
-    loadSummary();
-    loadChart();
-    loadHistoryChart();
-    loadEmployeeSuggestions();
+    loadAreaOptions()
+        .finally(function () {
+            loadOperationOptions();
+            loadEmployeeSuggestions();
+            reloadDashboard();
+        });
 });

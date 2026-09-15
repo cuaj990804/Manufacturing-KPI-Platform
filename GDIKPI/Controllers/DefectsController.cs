@@ -1,4 +1,4 @@
-﻿using GDIKPI.Data;
+using GDIKPI.Data;
 using GDIKPI.Models;
 using GDIKPI.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +12,12 @@ namespace GDIKPI.Controllers
     {
         private readonly KpisContext _context;
         private readonly PermissionService _permissionService;
-        public DefectsController(KpisContext context, PermissionService permissionService)
+        private readonly IConfiguration _configuration;
+        public DefectsController(KpisContext context, PermissionService permissionService, IConfiguration configuration)
         {
             _context = context;
             _permissionService = permissionService;
+            _configuration = configuration;
         }
         public IActionResult Index()
         {
@@ -99,7 +101,7 @@ namespace GDIKPI.Controllers
                 }
 
                 using var client = new HttpClient();
-                client.BaseAddress = new Uri("http://192.168.1.1:9091");
+                client.BaseAddress = new Uri((_configuration["ExternalApi:BaseUrl"] ?? "http://localhost:9091").TrimEnd('/') + "/");
                 client.Timeout = TimeSpan.FromSeconds(30);
 
                 var areaFullName = area.AreaName + " " + area.CustomerName;

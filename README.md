@@ -2,6 +2,19 @@
 
 Real-time manufacturing KPI and production monitoring platform built with ASP.NET Core MVC, SQL Server, Entity Framework Core, and SignalR. The system centralizes production tracking, OEE monitoring, quality management, downtime analysis, attendance synchronization, and live operational dashboards.
 
+## About this repository
+
+This is the public portfolio version of GDIKPI, an internal manufacturing application maintained in a separate private repository. The solution and application retain the GDIKPI name. This repository documents the implementation with local configuration examples; it does not include the private repository's Git history or production database.
+
+## Latest update
+
+- Production dashboard card visibility and ordering, with persisted settings and live updates.
+- Production-line scanning with line validation, recent scans, quantity handling, inactivity timeout, and synchronized scanner feedback through SignalR.
+- Operator-to-line assignments and expanded operator dashboard reporting.
+- Configurable scanner prefix/suffix validation and external part-number API endpoints.
+
+See [CHANGELOG.md](./CHANGELOG.md) for the update summary and database upgrade notes.
+
 ## Stack
 
 - .NET 8
@@ -132,24 +145,35 @@ Full flow details are available in [DIAGRAMA_FLUJO_APIS.md](./FLOWCHART_APIS.md)
 
 - .NET 8 SDK
 - Accessible SQL Server instance
+- Windows for operator report graphics that rely on `System.Drawing`.
 
 ### Steps
 
 1. Clone the repository.
-2. Create a local configuration for the connection string.
-3. Restore dependencies:
+2. Provision a development SQL Server database with the application's existing schema, views, stored procedures, and synthetic reference data. The scripts in `GDIKPI/Scripts` are incremental changes, not a complete database bootstrap. Review the upgrade notes in [CHANGELOG.md](./CHANGELOG.md).
+3. Configure the connection and external services using environment variables. The checked-in values target localhost and contain no database password. For example, in PowerShell:
+
+```powershell
+$env:ConnectionStrings__DefaultConnection = "Server=localhost;Database=ManufacturingKpiDemo;Integrated Security=true;TrustServerCertificate=true;MultipleActiveResultSets=True;"
+$env:ExternalApi__BaseUrl = "http://localhost:9091"
+$env:AttendanceApi__BaseUrl = "http://localhost:9092"
+```
+
+These API addresses are placeholders for separately supplied services; those services are not included in this repository.
+
+4. Restore dependencies:
 
 ```bash
 dotnet restore GDIKPI.sln
 ```
 
-4. Run the application:
+5. Run the application:
 
 ```bash
 dotnet run --project GDIKPI/GDIKPI.csproj --launch-profile http
 ```
 
-5. Open:
+6. Open:
 
 ```text
 http://localhost:5016
@@ -157,11 +181,15 @@ http://localhost:5016
 
 ## Configuration
 
-The application uses `appsettings.json` for connection strings and external API settings. For a shareable or public version, secrets should be moved to:
+The application uses `appsettings.json` and ASP.NET Core environment-variable overrides:
 
-- environment variables
-- `dotnet user-secrets`
-- a non-versioned local configuration file
+- `ConnectionStrings__DefaultConnection`: development SQL Server connection.
+- `ExternalApi__BaseUrl`: part-number and production-program service.
+- `AttendanceApi__BaseUrl`: attendance service.
+- `ScannerValidation__ZF__Enabled`: enables configurable prefix/suffix checks. The committed values are synthetic examples and validation is disabled by default.
+- `ProductionLineScanner__BatchInactivitySeconds`: scanner inactivity timeout (60 seconds by default).
+
+Generated dashboard preferences in `GDIKPI/App_Data` and local production configuration files are excluded from Git. Employee seed records are excluded from the public SQL script. Do not commit credentials or operational datasets.
 
 ## What this project demonstrates
 
@@ -173,20 +201,10 @@ The application uses `appsettings.json` for connection strings and external API 
 
 ## Current state
 
-This project was developed as an internal business application. Before publishing it as a strong portfolio piece, I recommend sanitizing and hardening it:
+This codebase demonstrates an internal manufacturing application and remains under active development. Running the complete workflows requires a compatible SQL Server schema and external services. The public repository is not a self-contained demo or a hardened public deployment.
 
-- remove credentials and sensitive data
-- strengthen authentication and authorization
-- remove insecure development configuration
-- add automated tests
-- move heavy business logic out of controllers
+Engineering priorities include automated regression tests, consistent endpoint authorization, production TLS configuration, and extracting complex controller logic into services. The attendance HTTP client currently bypasses certificate validation and must be hardened before a production deployment.
 
 ## Portfolio note
 
-If this repository is going to be public, the best positioning is:
-
-- an internal manufacturing KPI system
-- a real-world example of backend, UI, database, and real-time integration
-- a project being refactored toward stronger engineering practices
-
-That presents it better than trying to frame it as already production-ready for public distribution.
+The portfolio focuses on manufacturing workflows, backend and database integration, operational interfaces, and real-time visibility. Screenshots illustrate the documented workflows and may differ from the latest interface.

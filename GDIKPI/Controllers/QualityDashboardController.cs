@@ -1,4 +1,4 @@
-﻿using GDIKPI.Data;
+using GDIKPI.Data;
 using GDIKPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -14,10 +14,12 @@ namespace GDIKPI.Controllers
     
         private readonly KpisContext _context;
         private readonly PermissionService _permissionService;
-        public QualityDashboardController(KpisContext context, PermissionService permissionService)
+        private readonly IConfiguration _configuration;
+        public QualityDashboardController(KpisContext context, PermissionService permissionService, IConfiguration configuration)
         {
             _context = context;
             _permissionService = permissionService;
+            _configuration = configuration;
         }
         // GET: QualityDashboardController
         public ActionResult Index()
@@ -172,7 +174,7 @@ namespace GDIKPI.Controllers
                     return Json(new List<object>()); // No hay área seleccionada
 
                 using var client = new HttpClient();
-                client.BaseAddress = new Uri("http://192.168.1.1:9091"); // Ajusta el puerto según tu configuración
+                client.BaseAddress = new Uri((_configuration["ExternalApi:BaseUrl"] ?? "http://localhost:9091").TrimEnd('/') + "/"); // Ajusta el puerto según tu configuración
                 client.Timeout = TimeSpan.FromSeconds(30); // Timeout de 30 segundos
 
                 // Llamada al endpoint externo

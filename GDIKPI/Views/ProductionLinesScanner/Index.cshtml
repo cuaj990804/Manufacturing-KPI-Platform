@@ -1,0 +1,142 @@
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escaneo por Línea</title>
+    <link rel="stylesheet" href="~/css/productionOperators/styles.css" asp-append-version="true">
+</head>
+<body>
+    <button type="button" id="openInactivitySettings" class="scanner-settings-btn">
+        Tiempo de inactividad
+    </button>
+
+    <h1 class="title">ESCANEO POR LÍNEA</h1>
+
+    @if (ViewBag.AreaId != null)
+    {
+        <div class="area-context">@ViewBag.CustomerName - @ViewBag.AreaName</div>
+    }
+
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <div class="area-context error">@ViewBag.ErrorMessage</div>
+    }
+
+    <div class="scanner-layout">
+        <main class="fields">
+            <div class="field">
+                <div class="field-label">Número de línea</div>
+                <div class="input-clear-wrapper">
+                    <input type="text"
+                           id="lineInput"
+                           class="field-input"
+                           placeholder="Escanear..."
+                           inputmode="numeric"
+                           autocomplete="off"
+                           autofocus>
+                    <button type="button" id="clearLineInput" class="clear-input-btn">Finalizar tanda</button>
+                </div>
+                <div class="status-text" id="lineStatus"></div>
+            </div>
+
+            <div class="field">
+                <div class="field-label" id="volanteFieldLabel">Volante</div>
+                <div class="input-clear-wrapper">
+                    <input type="text"
+                           id="volanteInput"
+                           class="field-input"
+                           placeholder="Escanear..."
+                           autocomplete="off"
+                           minlength="10"
+                           disabled>
+                    <button type="button" id="clearVolanteInput" class="clear-input-btn">Borrar</button>
+                </div>
+                <div class="status-text" id="volanteStatus"></div>
+            </div>
+        </main>
+
+        <aside class="recent-scans" aria-label="Últimos escaneos">
+            <div class="recent-scans-header">
+                <h2>Últimos escaneos</h2>
+                <button id="openScansModal" class="open-modal-btn" type="button">Ver detalles</button>
+            </div>
+            <div class="recent-scans-list" id="recentScansList">
+                <div class="recent-scans-empty">Cargando...</div>
+            </div>
+        </aside>
+
+        <div class="modal-overlay" id="scansModal">
+            <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="scansModalTitle">
+                <div class="modal-header">
+                    <h2 id="scansModalTitle">Acumulado de piezas por línea</h2>
+                    <button id="closeScansModal" class="close-modal-btn" type="button" aria-label="Cerrar">✕</button>
+                </div>
+                <div class="modal-search-container">
+                    <input type="text"
+                           id="modalSearchInput"
+                           class="modal-search-input"
+                           placeholder="Buscar número o nombre de línea...">
+                </div>
+                <div class="modal-body" id="modalScansContent">
+                    <div class="recent-scans-empty">Cargando...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="inactivitySettingsModal">
+            <div class="modal-container inactivity-settings-modal" role="dialog" aria-modal="true" aria-labelledby="inactivitySettingsTitle">
+                <div class="modal-header">
+                    <h2 id="inactivitySettingsTitle">Configuración del escáner</h2>
+                    <button id="closeInactivitySettings" class="close-modal-btn" type="button" aria-label="Cerrar">✕</button>
+                </div>
+                <form id="inactivitySettingsForm">
+                    <div class="inactivity-settings-body">
+                        <label for="inactivitySecondsInput">Segundos sin actividad</label>
+                        <input type="number"
+                               id="inactivitySecondsInput"
+                               class="modal-search-input"
+                               min="1"
+                               max="86400"
+                               step="1"
+                               required>
+                        <div class="inactivity-settings-help">La tanda finalizará automáticamente al cumplirse este tiempo.</div>
+                        <div class="scanner-mode-setting">
+                            <div>
+                                <label for="quantityModeToggle">Agregar piezas por cantidad</label>
+                                <div class="inactivity-settings-help">
+                                    Al activarlo, el campo Volante recibirá la cantidad de piezas.
+                                </div>
+                            </div>
+                            <input type="checkbox"
+                                   id="quantityModeToggle"
+                                   class="scanner-mode-toggle"
+                                   role="switch">
+                        </div>
+                    </div>
+                    <div class="inactivity-settings-actions">
+                        <button type="button" id="cancelInactivitySettings" class="settings-action secondary">Cancelar</button>
+                        <button type="submit" class="settings-action primary">Aplicar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.productionLinesScannerConfig = {
+            areaId: @(ViewBag.AreaId != null ? ViewBag.AreaId : "null"),
+            areaName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.AreaName ?? "")),
+            customerName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CustomerName ?? "")),
+            batchInactivitySeconds: @(ViewBag.BatchInactivitySeconds ?? 60),
+            scannerValidation: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ScannerValidation))
+        };
+    </script>
+    <script src="https://unpkg.com/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="~/js/productionLinesScanner/main.js" asp-append-version="true"></script>
+</body>
+</html>

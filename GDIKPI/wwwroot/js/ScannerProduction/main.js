@@ -16,6 +16,7 @@ function initializeServerData() {
         state.customerName = window.SCANNER_DATA.customerName;
         state.personalQuantity = window.SCANNER_DATA.personalQuantity;
         state.standardTime = Number(window.SCANNER_DATA.standardTime || 0);
+        state.scannerValidation = window.SCANNER_DATA.scannerValidation || {};
 
         // Establecer el requerimiento desde dailyGoal
         if (state.dailyGoal > 0) {
@@ -68,7 +69,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                handleScan();
+
+                if (isScanInProgress) {
+                    scanInputEl.value = '';
+                    return;
+                }
+
+                if (scanInputSettleTimeout) {
+                    clearTimeout(scanInputSettleTimeout);
+                }
+
+                scanInputSettleTimeout = setTimeout(() => {
+                    Promise.resolve(handleScan())
+                        .finally(() => {
+                            scanInputSettleTimeout = null;
+                        });
+                }, CONFIG.UI.SCAN_INPUT_SETTLE_DELAY);
             }
         });
     }

@@ -27,6 +27,8 @@ public partial class KpisContext : DbContext
 
     public virtual DbSet<Command> Commands { get; set; }
 
+    public virtual DbSet<DashboardProductionCardSetting> DashboardProductionCardSettings { get; set; }
+
     public virtual DbSet<Defect> Defects { get; set; }
 
     public virtual DbSet<DefectsCategory> DefectsCategories { get; set; }
@@ -164,6 +166,23 @@ public partial class KpisContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Scope).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<DashboardProductionCardSetting>(entity =>
+        {
+            entity.HasKey(e => e.DashboardProductionCardSettingId)
+                .HasName("PK_DashboardProductionCardSettings");
+
+            entity.HasIndex(e => e.CardKey, "UX_DashboardProductionCardSettings_CardKey")
+                .IsUnique();
+
+            entity.Property(e => e.CardKey)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.IsVisible).HasDefaultValue(true);
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("(getdate())");
         });
 
         modelBuilder.Entity<Defect>(entity =>
@@ -442,10 +461,15 @@ public partial class KpisContext : DbContext
             entity.Property(e => e.Operation)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.ProductionLinesId).HasColumnName("ProductionLinesID");
 
             entity.HasOne(d => d.Area).WithMany(p => p.ProductionOperators)
                 .HasForeignKey(d => d.AreaId)
                 .HasConstraintName("FK_ProductionOperators_Areas");
+
+            entity.HasOne(d => d.ProductionLines).WithMany(p => p.ProductionOperators)
+                .HasForeignKey(d => d.ProductionLinesId)
+                .HasConstraintName("FK_ProductionOperators_ProductionLines");
         });
 
         modelBuilder.Entity<ProductionOperatorsScan>(entity =>

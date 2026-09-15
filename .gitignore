@@ -369,3 +369,10 @@ FodyWeavers.xsd
 GDIKPI/.dotnet-cli-home/
 DB.bak
 *.bak
+
+# Private environment overrides and generated dashboard preferences
+**/appsettings.Local.json
+**/appsettings.Production.json
+**/.env
+**/.env.*
+GDIKPI/App_Data/

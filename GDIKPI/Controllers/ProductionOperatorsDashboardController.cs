@@ -16,15 +16,64 @@ namespace GDIKPI.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? areaId = null)
         {
-            var operations = await _context.ProductionOperators
+            var areas = await _context.Areas
                 .AsNoTracking()
-                .Where(operatorItem => !string.IsNullOrWhiteSpace(operatorItem.Operation))
+                .OrderBy(areaItem => areaItem.CustomerName)
+                .ThenBy(areaItem => areaItem.AreaName)
+                .Select(areaItem => new
+                {
+                    areaItem.AreaId,
+                    areaItem.AreaName,
+                    areaItem.CustomerName
+                })
+                .ToListAsync();
+
+            ViewBag.Areas = areas;
+
+            if (areaId.HasValue)
+            {
+                var area = areas.FirstOrDefault(areaItem => areaItem.AreaId == areaId.Value);
+
+                if (area is null)
+                {
+                    ViewBag.ErrorMessage = "Area no encontrada.";
+                }
+                else
+                {
+                    ViewBag.AreaId = area.AreaId;
+                    ViewBag.AreaName = area.AreaName;
+                    ViewBag.CustomerName = area.CustomerName;
+                }
+            }
+
+            var operatorsQuery = _context.ProductionOperators
+                .AsNoTracking()
+                .Where(operatorItem => !string.IsNullOrWhiteSpace(operatorItem.Operation));
+
+            if (areaId.HasValue)
+            {
+                operatorsQuery = operatorsQuery.Where(operatorItem => operatorItem.AreaId == areaId.Value);
+            }
+
+            var operations = await operatorsQuery
                 .Select(operatorItem => operatorItem.Operation!)
                 .Distinct()
                 .OrderBy(operation => operation)
                 .ToListAsync();
+
+            var hasProductionLines = await _context.ProductionLines
+                .AsNoTracking()
+                .AnyAsync(line =>
+                    line.IsActive &&
+                    (!areaId.HasValue || line.AreaId == areaId.Value));
+
+            if (hasProductionLines && !operations.Contains("VOLANTES"))
+            {
+                operations.Add("VOLANTES");
+                operations.Sort(StringComparer.OrdinalIgnoreCase);
+            }
 
             ViewBag.OperationsList = new SelectList(operations);
 
@@ -51,6 +100,26 @@ namespace GDIKPI.Controllers
                 .ThenByDescending(o => o.ScanCount)
                 .ThenBy(o => o.FullName)
                 .ToListAsync();
+
+            var lineStats = await _context.ProductionLines
+                .AsNoTracking()
+                .Where(line => line.IsActive)
+                .Select(line => new
+                {
+                    EmployeeNumber = line.LineNumber ?? line.ProductionLinesId,
+                    FullName = "LINEA " + (line.LineNumber ?? line.ProductionLinesId),
+                    Operation = "VOLANTES",
+                    Goal = (int?)line.DailyGoal,
+                    ScanCount = _context.ScannerProductions.Count(scan =>
+                        scan.LineId == line.ProductionLinesId &&
+                        scan.ScannerProductionDateTime >= today &&
+                        scan.ScannerProductionDateTime < tomorrow)
+                })
+                .OrderByDescending(line => line.ScanCount)
+                .ThenBy(line => line.FullName)
+                .ToListAsync();
+
+            stats.AddRange(lineStats);
 
             var grouped = stats
                 .GroupBy(o => o.Operation)

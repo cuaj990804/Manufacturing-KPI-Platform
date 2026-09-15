@@ -494,6 +494,32 @@ function updateRejectDefectsCount() {
     counter.textContent = `${count} ${count === 1 ? 'seleccionado' : 'seleccionados'}`;
 }
 
+function setRejectSavingState(isSaving) {
+    const employeeInput = document.getElementById('rejectEmployeeInput');
+    const pieceInput = document.getElementById('rejectPieceInput');
+    const defectInput = document.getElementById('rejectDefectInput');
+    const searchInput = document.getElementById('rejectDefectSearch');
+    const confirmButton = document.getElementById('confirmRejectBtn');
+
+    [employeeInput, pieceInput, defectInput, searchInput].forEach(input => {
+        if (!input) return;
+
+        if (isSaving) {
+            input.dataset.wasDisabled = input.disabled ? 'true' : 'false';
+            input.disabled = true;
+            return;
+        }
+
+        input.disabled = input.dataset.wasDisabled === 'true';
+        delete input.dataset.wasDisabled;
+    });
+
+    if (confirmButton) {
+        confirmButton.disabled = isSaving || rejectState.scannedDefects.length === 0;
+        confirmButton.textContent = isSaving ? 'Guardando...' : 'Confirmar rechazo';
+    }
+}
+
 async function confirmReject() {
     const employeeInput = document.getElementById('rejectEmployeeInput');
     const employeeNumber = employeeInput ? employeeInput.value.trim() : '';
@@ -540,6 +566,8 @@ async function confirmReject() {
     const programId = hasProgramId ? (currentPartData.programId || currentPartData.id) : null;
 
     try {
+        setRejectSavingState(true);
+
         const response = await fetch(CONFIG.API.SAVE_REJECTION, {
             method: 'POST',
             headers: {
@@ -566,11 +594,13 @@ async function confirmReject() {
         const result = await response.json();
         registerRecentDefects(rejectState.scannedDefects);
         await loadMetricsFromAPI();
+        setRejectSavingState(false);
         resetRejectFlow();
 
         console.log('Rechazo registrado exitosamente:', result);
     } catch (error) {
         console.error('Error al guardar el rechazo:', error);
         alert('Error al guardar el rechazo: ' + error.message);
+        setRejectSavingState(false);
     }
 }

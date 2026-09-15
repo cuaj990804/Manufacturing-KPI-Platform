@@ -106,8 +106,18 @@ namespace GDIKPI.Services
                         }
                         else if (IsProductionModule(module))
                         {
-                            card.Title = $"Área {area.CustomerName} {area.AreaName}";
-                            card.Description = "Registro de producción";
+                            if (IsProductionOperatorsModule(module))
+                            {
+                                card.Title = "Escanear Produccion";
+                                card.Description = $"{area.CustomerName} - {area.AreaName}";
+                                card.Icon = "fas fa-barcode";
+                            }
+                            else
+                            {
+                                card.Title = $"Área {area.CustomerName} {area.AreaName}";
+                                card.Description = "Registro de producción";
+                            }
+
                             moduleCards.ProductionCards.Add(card);
                         }
                         else if (IsQualityModule(module))
@@ -207,6 +217,17 @@ namespace GDIKPI.Services
                             Icon = "fas fa-industry",
                             Category = "Producciódn"
                         });
+
+                        moduleCards.ProductionCards.Add(new ModuleCard
+                        {
+                            Title = "Escanear Produccion",
+                            Description = $"{area.CustomerName} - {area.AreaName}",
+                            Controller = "ProductionOperators",
+                            Action = "Index",
+                            RouteValues = new { areaId = area.AreaId },
+                            Icon = "fas fa-barcode",
+                            Category = "Producción"
+                        });
                     }
                 }
                 else
@@ -234,6 +255,17 @@ namespace GDIKPI.Services
                                     Action = "Index",
                                     RouteValues = new { areaId = area.AreaId },
                                     Icon = "fas fa-industry",
+                                    Category = "Producción"
+                                });
+
+                                moduleCards.ProductionCards.Add(new ModuleCard
+                                {
+                                    Title = "Escanear Produccion",
+                                    Description = $"{area.CustomerName} - {area.AreaName}",
+                                    Controller = "ProductionOperators",
+                                    Action = "Index",
+                                    RouteValues = new { areaId = area.AreaId },
+                                    Icon = "fas fa-barcode",
                                     Category = "Producción"
                                 });
                             }
@@ -570,6 +602,7 @@ namespace GDIKPI.Services
             if (module.ModuleName.Contains("Gestión de Usuarios")) return false;
             if (module.Route?.Contains("PanelControl") == true) return false;
             if (module.Route?.Contains("/OEE/") == true && !module.Route.Contains("DashboardProduction")) return false;
+            if (module.Route?.Contains("ProductionOperatorsDashboard") == true) return false;
 
             // Módulos que SÍ requieren área
             if (IsProductionModule(module)) return true;
@@ -579,6 +612,12 @@ namespace GDIKPI.Services
 
             // Por defecto, no requiere área
             return false;
+        }
+
+        private bool IsProductionOperatorsModule(Module module)
+        {
+            return module.Route?.Contains("ProductionOperators") == true &&
+                module.Route?.Contains("ProductionOperatorsDashboard") != true;
         }
 
         private string ExtractControllerFromRoute(string? route)

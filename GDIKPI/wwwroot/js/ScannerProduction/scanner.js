@@ -8,19 +8,37 @@
 async function handleScan() {
     const input = document.getElementById('scanInput');
     const code = input.value.trim();
+    const scanKey = getScanKey(code);
 
     if (!code) return;
+
+    const now = Date.now();
+    if (lastSavedScanValue === scanKey && now - lastSavedScanAt < CONFIG.UI.SAME_SCAN_SUPPRESS_DELAY) {
+        input.value = '';
+        return;
+    }
+
+    if (activeScanValue === scanKey && now - activeScanStartedAt < CONFIG.UI.SAME_SCAN_SUPPRESS_DELAY) {
+        input.value = '';
+        return;
+    }
+
+    activeScanValue = scanKey;
+    activeScanStartedAt = now;
+    beginScanProcessing(input);
 
     // DETECCIÓN DE CÓDIGO ESPECIAL: REJECT (y RPP por compatibilidad) abre el modal de rechazo
     const specialCode = code.toUpperCase();
     if (specialCode === 'REJECT' || specialCode === 'RPP') {
         input.value = '';
+        finishScanProcessing(input);
         redirectToRejectPage();
         return;
     }
 
     if (await isEmployeeNumberForReject(code)) {
         input.value = '';
+        finishScanProcessing(input);
         redirectToRejectPage(code);
         return;
     }
@@ -28,12 +46,14 @@ async function handleScan() {
     // Validar que se tenga el ID de la línea de producción
     if (!state.productionLineId) {
         alert('Error: No se encontró el ID de la línea de producción');
+        finishScanProcessing(input);
         return;
     }
 
-    if (isZfCustomer() && !extractZfPartNumberFromScan(code)) {
+    const customerValidation = validateCustomerScan(code);
+    if (!customerValidation.isValid) {
         showScanResult('error', code);
-        showScanToast('Formato invalido ZF: NP+YY+JJJ+T+CCCC', 'error');
+        showScanToast(customerValidation.message, 'error');
         input.value = '';
 
         setTimeout(() => {
@@ -41,6 +61,7 @@ async function handleScan() {
             resetScanStatus();
         }, CONFIG.UI.RESET_SCAN_STATUS_DELAY);
 
+        finishScanProcessing(input);
         return;
     }
 
@@ -49,6 +70,12 @@ async function handleScan() {
         const validationResult = await validateScannerValue(code);
 
         if (!validationResult.isValid) {
+            if (isRecentSavedScan(scanKey)) {
+                input.value = '';
+                finishScanProcessing(input);
+                return;
+            }
+
             const scanDateTime = new Date(validationResult.scanDetails.scanDateTime);
             showScanResult('error', code);
             const previousScanText = scanDateTime.toLocaleString('es-MX', {
@@ -67,12 +94,14 @@ async function handleScan() {
                 resetScanStatus();
             }, CONFIG.UI.RESET_SCAN_STATUS_DELAY);
 
+            finishScanProcessing(input);
             return;
         }
     } catch (error) {
         console.error('Error al validar el código:', error);
         alert('Error al validar el código: ' + error.message);
         input.value = '';
+        finishScanProcessing(input);
         return;
     }
 
@@ -82,6 +111,8 @@ async function handleScan() {
         state.producidas++;
         state.scanStatus = 'success';
         state.lastScan = code;
+        lastSavedScanValue = scanKey;
+        lastSavedScanAt = Date.now();
         showScanResult('success', code);
         showScanToast('Escaneo registrado con éxito', 'success');
 
@@ -91,6 +122,7 @@ async function handleScan() {
         console.error('Error al guardar el escaneo:', error);
         alert('Error al guardar el escaneo en la base de datos: ' + error.message);
         input.value = '';
+        finishScanProcessing(input);
         return;
     }
 
@@ -101,6 +133,8 @@ async function handleScan() {
         state.scanStatus = null;
         resetScanStatus();
     }, CONFIG.UI.RESET_SCAN_STATUS_DELAY);
+
+    finishScanProcessing(input);
 }
 
 async function isEmployeeNumberForReject(value) {
@@ -120,6 +154,31 @@ async function isEmployeeNumberForReject(value) {
     } catch (error) {
         console.error('Error al validar numero de empleado:', error);
         return false;
+    }
+}
+
+function getScanKey(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+function isRecentSavedScan(scanKey) {
+    const now = Date.now();
+    return lastSavedScanValue === scanKey
+        && now - lastSavedScanAt < CONFIG.UI.SAME_SCAN_SUPPRESS_DELAY;
+}
+
+function beginScanProcessing(input) {
+    isScanInProgress = true;
+    if (input) {
+        input.disabled = true;
+    }
+}
+
+function finishScanProcessing(input) {
+    isScanInProgress = false;
+    if (input) {
+        input.disabled = false;
+        input.focus();
     }
 }
 
@@ -168,6 +227,41 @@ function isZfCustomer() {
     return String(state.customerName || '').toLowerCase().includes('zf');
 }
 
+function normalizeRuleList(values) {
+    return Array.isArray(values)
+        ? values.map(value => String(value || '').trim().toUpperCase()).filter(Boolean)
+        : [];
+}
+
+function validateCustomerScan(scannerValue) {
+    if (!isZfCustomer()) {
+        return { isValid: true };
+    }
+
+    const zfRules = state.scannerValidation?.ZF || state.scannerValidation?.zf || {};
+    if (zfRules.enabled === false) {
+        return { isValid: true };
+    }
+
+    const normalizedScan = String(scannerValue || '').trim().toUpperCase();
+    const allowedPrefixes = normalizeRuleList(zfRules.allowedPrefixes);
+    const allowedSuffixes = normalizeRuleList(zfRules.allowedSuffixes);
+
+    const hasValidPrefix = allowedPrefixes.length === 0
+        || allowedPrefixes.some(prefix => normalizedScan.startsWith(prefix));
+    const hasValidSuffix = allowedSuffixes.length === 0
+        || allowedSuffixes.some(suffix => normalizedScan.endsWith(suffix));
+
+    if (hasValidPrefix && hasValidSuffix) {
+        return { isValid: true };
+    }
+
+    return {
+        isValid: false,
+        message: 'Lectura alterada. Reescanea la pieza.'
+    };
+}
+
 function reverseString(value) {
     return String(value || '').split('').reverse().join('');
 }
@@ -202,6 +296,7 @@ function extractZfPartNumberFromScan(scannerValue) {
 
 function getZfPartNumberCandidates(scannerValue) {
     const candidates = [];
+    const normalizedScan = String(scannerValue || '').trim().toUpperCase();
 
     const addCandidate = (value) => {
         const candidate = String(value || '').trim().toUpperCase();
@@ -210,6 +305,11 @@ function getZfPartNumberCandidates(scannerValue) {
             candidates.push(candidate);
         }
     };
+
+    const zfRules = state.scannerValidation?.ZF || state.scannerValidation?.zf || {};
+    normalizeRuleList(zfRules.allowedPrefixes)
+        .filter(prefix => normalizedScan.startsWith(prefix))
+        .forEach(addCandidate);
 
     const extractedPartNumber = extractZfPartNumberFromScan(scannerValue);
     if (extractedPartNumber) {

@@ -1,4 +1,4 @@
-﻿using GDIKPI.Data;
+using GDIKPI.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +10,12 @@ namespace GDIKPI.Controllers
     public class ScannerProductionController : Controller
     {
         private readonly KpisContext _context;
+        private readonly IConfiguration _configuration;
 
-        public ScannerProductionController(KpisContext context)
+        public ScannerProductionController(KpisContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         // GET: ScannerProductionController
@@ -154,7 +156,7 @@ namespace GDIKPI.Controllers
                 }
 
                 using var client = new HttpClient();
-                client.BaseAddress = new Uri("http://192.168.1.1:9091");
+                client.BaseAddress = new Uri((_configuration["ExternalApi:BaseUrl"] ?? "http://localhost:9091").TrimEnd('/') + "/");
                 client.Timeout = TimeSpan.FromSeconds(30);
 
                 var response = await client.GetAsync($"/GetProgram?area={Uri.EscapeDataString(customerName)}");
@@ -205,6 +207,15 @@ namespace GDIKPI.Controllers
             ViewBag.CustomerName = productionLine.Area?.CustomerName;
             ViewBag.PersonalQuantity = productionLine.PersonalQuantity;
             ViewBag.StandardTime = productionLine.StandardTime ?? 0m;
+            ViewBag.ScannerValidation = new
+            {
+                ZF = new
+                {
+                    enabled = _configuration.GetValue<bool>("ScannerValidation:ZF:Enabled"),
+                    allowedPrefixes = _configuration.GetSection("ScannerValidation:ZF:AllowedPrefixes").Get<string[]>() ?? Array.Empty<string>(),
+                    allowedSuffixes = _configuration.GetSection("ScannerValidation:ZF:AllowedSuffixes").Get<string[]>() ?? Array.Empty<string>()
+                }
+            };
 
             return productionLine;
         }

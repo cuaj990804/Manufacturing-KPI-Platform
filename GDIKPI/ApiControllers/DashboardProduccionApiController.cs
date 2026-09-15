@@ -81,58 +81,59 @@ namespace GDIKPI.Controllers
                             areaId, dateParam, timeParam)
                         .ToListAsync();
 
-                    // Filtrar solo líneas activas
-                    var activeLineNumbers = await _context.ProductionLines
+                    // Incluir siempre todas las lineas activas, aunque el procedimiento
+                    // todavia no genere un registro para el intervalo actual.
+                    var activeLines = await _context.ProductionLines
                         .Where(pl => pl.AreaId == areaId && pl.IsActive)
-                        .Select(pl => pl.LineNumber)
+                        .Select(pl => new
+                        {
+                            pl.ProductionLinesId,
+                            pl.LineNumber,
+                            pl.LineName,
+                            AreaName = pl.Area != null ? pl.Area.AreaName : "",
+                            CustomerName = pl.Area != null ? pl.Area.CustomerName : ""
+                        })
                         .ToListAsync();
-
-                    var filteredResults = results.Where(r => activeLineNumbers.Contains(r.LineNumber)).ToList();
 
                     // Crear lista de respuesta con OEE
                     var response = new List<DailyProductionWithOEEDTO>();
 
                     // Obtener OEE para cada línea
-                    foreach (var result in filteredResults)
+                    foreach (var productionLine in activeLines)
                     {
-                        var productionLine = await _context.ProductionLines
-                            .Where(pl => pl.LineNumber == result.LineNumber && pl.AreaId == areaId)
-                            .Select(pl => new { pl.ProductionLinesId, pl.LineName })
-                            .FirstOrDefaultAsync();
-
-                        var productionLineId = productionLine?.ProductionLinesId ?? 0;
-                        var lineName = productionLine?.LineName;
+                        var result = results.FirstOrDefault(item => item.LineNumber == productionLine.LineNumber);
+                        var productionLineId = productionLine.ProductionLinesId;
 
                         decimal oeePercentage = 0;
-                        if (productionLineId > 0)
-                        {
-                            var oeeResults = await _context.LineOEE
-                                .FromSqlRaw("EXEC [dbo].[GetLineOEE] @ProductionLineId = {0}, @TargetDate = {1}, @TargetTime = {2}",
-                                    productionLineId, dateParam, timeParam)
-                                .ToListAsync();
+                        var oeeResults = await _context.LineOEE
+                            .FromSqlRaw("EXEC [dbo].[GetLineOEE] @ProductionLineId = {0}, @TargetDate = {1}, @TargetTime = {2}",
+                                productionLineId, dateParam, timeParam)
+                            .ToListAsync();
 
-                            oeePercentage = oeeResults.FirstOrDefault()?.OeePercentage ?? 0;
-                        }
+                        oeePercentage = oeeResults.FirstOrDefault()?.OeePercentage ?? 0;
 
                         response.Add(new DailyProductionWithOEEDTO
                         {
                             LineId = productionLineId,
-                            AreaCustomerName = result.AreaCustomerName,
-                            LineNumber = result.LineNumber,
-                            LineName = lineName,
-                            ProductionDate = result.ProductionDate,
-                            HourInterval = result.HourInterval,
-                            GoalPieces = result.GoalPieces,
-                            ProducedPieces = result.ProducedPieces,
-                            RejectedPieces = result.RejectedPieces,
-                            AccumulatedRejections = result.AccumulatedRejections,
-                            DowntimeMinutes = result.DowntimeMinutes,
-                            AccumulatedDowntime = result.AccumulatedDowntime,
-                            AccumulatedBalance = result.AccumulatedBalance,
-                            EstimatedGoalPieces = result.EstimatedGoalPieces,
-                            RequirementGoalPieces = result.RequirementGoalPieces,
-                            RequirementBalance = result.RequirementBalance,
-                            QualityPercentage = result.QualityPercentage,
+                            AreaCustomerName = result?.AreaCustomerName
+                                ?? productionLine.CustomerName
+                                ?? productionLine.AreaName
+                                ?? "",
+                            LineNumber = productionLine.LineNumber ?? 0,
+                            LineName = productionLine.LineName,
+                            ProductionDate = result?.ProductionDate ?? dateParam,
+                            HourInterval = result?.HourInterval ?? "",
+                            GoalPieces = result?.GoalPieces ?? 0,
+                            ProducedPieces = result?.ProducedPieces ?? 0,
+                            RejectedPieces = result?.RejectedPieces ?? 0,
+                            AccumulatedRejections = result?.AccumulatedRejections ?? 0,
+                            DowntimeMinutes = result?.DowntimeMinutes ?? 0,
+                            AccumulatedDowntime = result?.AccumulatedDowntime ?? 0,
+                            AccumulatedBalance = result?.AccumulatedBalance ?? 0,
+                            EstimatedGoalPieces = result?.EstimatedGoalPieces ?? 0,
+                            RequirementGoalPieces = result?.RequirementGoalPieces ?? 0,
+                            RequirementBalance = result?.RequirementBalance ?? 0,
+                            QualityPercentage = result?.QualityPercentage ?? 0,
                             OEEPercentage = oeePercentage
                         });
 
@@ -144,7 +145,15 @@ namespace GDIKPI.Controllers
                    
                     var activeLines = await _context.ProductionLines
                         .Where(pl => pl.IsActive)
-                        .Select(pl => new { pl.AreaId, pl.LineNumber, pl.ProductionLinesId, pl.LineName })
+                        .Select(pl => new
+                        {
+                            pl.AreaId,
+                            pl.LineNumber,
+                            pl.ProductionLinesId,
+                            pl.LineName,
+                            AreaName = pl.Area != null ? pl.Area.AreaName : "",
+                            CustomerName = pl.Area != null ? pl.Area.CustomerName : ""
+                        })
                         .ToListAsync();
 
                     var response = new List<DailyProductionWithOEEDTO>();
@@ -158,8 +167,6 @@ namespace GDIKPI.Controllers
 
                         var match = results.FirstOrDefault(r => r.LineNumber == line.LineNumber);
 
-                        if (match == null) continue;
-
                         decimal oee = 0;
 
                         var oeeResult = await _context.LineOEE
@@ -172,15 +179,25 @@ namespace GDIKPI.Controllers
                         response.Add(new DailyProductionWithOEEDTO
                         {
                             LineId = line.ProductionLinesId,
-                            AreaCustomerName = match.AreaCustomerName,
-                            LineNumber = match.LineNumber,
+                            AreaCustomerName = match?.AreaCustomerName
+                                ?? line.CustomerName
+                                ?? line.AreaName
+                                ?? "",
+                            LineNumber = line.LineNumber ?? 0,
                             LineName = line.LineName,
-                            ProducedPieces = match.ProducedPieces,
-                            RequirementGoalPieces = match.RequirementGoalPieces,
-                            RequirementBalance = match.RequirementBalance,
-                            RejectedPieces = match.RejectedPieces,
-                            DowntimeMinutes = match.DowntimeMinutes,
-                            QualityPercentage = match.QualityPercentage,
+                            ProductionDate = match?.ProductionDate ?? dateParam,
+                            HourInterval = match?.HourInterval ?? "",
+                            GoalPieces = match?.GoalPieces ?? 0,
+                            ProducedPieces = match?.ProducedPieces ?? 0,
+                            RejectedPieces = match?.RejectedPieces ?? 0,
+                            AccumulatedRejections = match?.AccumulatedRejections ?? 0,
+                            DowntimeMinutes = match?.DowntimeMinutes ?? 0,
+                            AccumulatedDowntime = match?.AccumulatedDowntime ?? 0,
+                            AccumulatedBalance = match?.AccumulatedBalance ?? 0,
+                            EstimatedGoalPieces = match?.EstimatedGoalPieces ?? 0,
+                            RequirementGoalPieces = match?.RequirementGoalPieces ?? 0,
+                            RequirementBalance = match?.RequirementBalance ?? 0,
+                            QualityPercentage = match?.QualityPercentage ?? 0,
                             OEEPercentage = oee
                         });
                     }

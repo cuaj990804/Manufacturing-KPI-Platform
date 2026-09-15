@@ -1,6 +1,9 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "Escaneos de Operadores";
+
+    var areas = ViewBag.Areas as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    int? selectedScanAreaId = ViewBag.AreaId as int?;
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -85,6 +88,36 @@
 
     #OperatorsScansTable {
         margin-bottom: 0;
+    }
+
+    #OperatorsAuditTable {
+        margin-bottom: 0;
+    }
+
+    .audit-log-card .card-header {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+
+    .audit-log-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .audit-log-filters .form-control,
+    .audit-log-filters .form-select {
+        font-size: 0.8rem;
+        height: 32px;
+        max-width: 180px;
+    }
+
+    .audit-details-cell {
+        max-width: 520px;
+        white-space: normal;
     }
 
     .dataTables_wrapper .dataTables_info,
@@ -246,8 +279,32 @@
                     Dashboard de Escaneos
                 </h1>
                 <small class="text-white-50">Visualizacion de escaneos por operador y operacion</small>
+                @if (ViewBag.AreaId != null)
+                {
+                    <small class="d-block text-white fw-semibold">@ViewBag.CustomerName - @ViewBag.AreaName</small>
+                }
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <button class="btn btn-light btn-sm"
+                        id="btnScanProduction"
+                        type="button"
+                        data-scan-route="@Url.Action("Index", "ProductionOperators")"
+                        data-bs-toggle="modal"
+                        data-bs-target="#scanProductionAreaModal"
+                        @(areas.Any() ? "" : "disabled")>
+                    <i class="fas fa-user me-1"></i>
+                    Escanear por operador
+                </button>
+                <button class="btn btn-outline-light btn-sm"
+                        id="btnScanProductionLine"
+                        type="button"
+                        data-scan-route="@Url.Action("Index", "ProductionLinesScanner")"
+                        data-bs-toggle="modal"
+                        data-bs-target="#scanProductionAreaModal"
+                        @(areas.Any() ? "" : "disabled")>
+                    <i class="fas fa-industry me-1"></i>
+                    Escanear por linea
+                </button>
                 <a class="btn btn-outline-light btn-sm" href="@Url.Action("OperatorStats", "ProductionOperatorsDashboard")">
                     <i class="fas fa-chart-simple me-1"></i>
                     Estadisticas
@@ -256,9 +313,21 @@
                     <i class="fas fa-download me-1"></i>
                     Exportar
                 </button>
+                <button class="btn btn-outline-light btn-sm" id="btnAddManualPieces">
+                    <i class="fas fa-plus me-1"></i>
+                    Anadir Piezas
+                </button>
+                <button class="btn btn-outline-light btn-sm" id="btnAddLineProduction" type="button">
+                    <i class="fas fa-industry me-1"></i>
+                    Anadir a Linea
+                </button>
                 <button class="btn btn-outline-light btn-sm" id="btnAddOperator">
                     <i class="fas fa-user-plus me-1"></i>
                     Gestion de Operadores
+                </button>
+                <button class="btn btn-outline-light btn-sm" id="btnManageLines" type="button">
+                    <i class="fas fa-industry me-1"></i>
+                    Gestion de Lineas
                 </button>
             </div>
         </div>
@@ -285,7 +354,7 @@
     <div class="col-6 col-lg-3">
         <div class="card metric-card">
             <div class="card-body">
-                <div class="metric-label">Operadores</div>
+                <div class="metric-label">Operadores / lineas</div>
                 <div class="metric-value" id="uniqueOperatorsMetric">0</div>
             </div>
         </div>
@@ -306,7 +375,7 @@
         <div class="card-header bg-white">
             <h5 class="mb-0">
                 <i class="fas fa-chart-column me-2"></i>
-                Escaneos por operacion
+                Producción por operación / línea
             </h5>
         </div>
         <div class="card-body">
@@ -319,7 +388,7 @@
         <div class="card-header bg-white">
             <h5 class="mb-0">
                 <i class="fas fa-chart-line me-2"></i>
-                Historial de escaneos
+                Historial de producción
             </h5>
         </div>
         <div class="card-body">
@@ -333,6 +402,18 @@
 <div class="card table-container">
     <div class="card-body border-bottom">
         <div class="filter-row">
+            <div class="filter-item">
+                <label class="form-label">Area</label>
+                <select class="form-select" id="areaFilter">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label class="form-label">Linea</label>
+                <select class="form-select" id="lineFilter">
+                    <option value="">Todas</option>
+                </select>
+            </div>
             <div class="filter-item">
                 <label class="form-label">Operacion</label>
                 <select class="form-select" id="operationFilter">
@@ -377,8 +458,8 @@
                 <tr>
                     <th>Fecha</th>
                     <th>Hora</th>
-                    <th>Empleado</th>
-                    <th>Nombre</th>
+                    <th>Referencia</th>
+                    <th>Operador / linea</th>
                     <th>Operacion</th>
                     <th>Codigo</th>
                     <th style="width:80px">Acciones</th>
@@ -389,6 +470,149 @@
     </div>
 </div>
 </div>
+
+<div class="card table-container audit-log-card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>
+            Log de movimientos
+        </h5>
+        <div class="audit-log-filters">
+            <select class="form-select" id="auditActionFilter" aria-label="Tipo de movimiento">
+                <option value="">Todos los movimientos</option>
+                <option value="CREATE">Escaneos guardados</option>
+                <option value="REJECTED">Intentos rechazados</option>
+                <option value="UPDATE">Actualizaciones</option>
+                <option value="ADD_MANUAL_PIECES">Piezas manuales</option>
+                <option value="DEACTIVATE">Desactivaciones</option>
+            </select>
+            <input type="text" class="form-control" id="auditUserFilter" placeholder="Usuario..." autocomplete="off">
+            <input type="text" class="form-control" id="auditEmployeeFilter" placeholder="Empleado..." autocomplete="off">
+            <input type="text" class="form-control" id="auditCodeFilter" placeholder="Codigo pieza..." autocomplete="off">
+            <input type="text" class="form-control" id="auditSearchFilter" placeholder="Detalles..." autocomplete="off">
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover" id="OperatorsAuditTable">
+            <thead class="table-light">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Usuario</th>
+                    <th>Empleado</th>
+                    <th>Codigo</th>
+                    <th>Accion</th>
+                    <th>Entidad</th>
+                    <th>Referencia</th>
+                    <th>Detalles</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<div class="modal fade" id="manualPiecesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-operators text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Anadir piezas
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manualPiecesForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Empleado <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="manualPiecesEmployee" list="manualPiecesEmployeeOptions" placeholder="Numero o nombre" required autocomplete="off">
+                        <datalist id="manualPiecesEmployeeOptions"></datalist>
+                        <div class="invalid-feedback">Seleccione un empleado valido</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Codigo base</label>
+                        <input type="text" class="form-control" id="manualPiecesCode" maxlength="40" placeholder="Opcional">
+                        <div class="form-text">Si se deja vacio se generara un codigo automatico.</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="manualPiecesQuantity" min="1" max="500" step="1" value="1" required>
+                            <div class="invalid-feedback">Ingrese una cantidad entre 1 y 500</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="manualPiecesDate" required>
+                            <div class="invalid-feedback">Seleccione la fecha</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Hora</label>
+                            <input type="time" class="form-control" id="manualPiecesTime">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveManualPieces" form="manualPiecesForm">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="manualLineProductionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-operators text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-industry me-2"></i>
+                    Anadir produccion a linea
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manualLineProductionForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="manualLineProductionLine">Linea <span class="text-danger">*</span></label>
+                        <select class="form-select" id="manualLineProductionLine" required>
+                            <option value="">Seleccione una linea</option>
+                        </select>
+                        <div class="invalid-feedback">Seleccione una linea activa</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" for="manualLineProductionQuantity">Cantidad <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="manualLineProductionQuantity" min="1" max="5000" step="1" value="1" required>
+                            <div class="invalid-feedback">Ingrese una cantidad entre 1 y 5000</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" for="manualLineProductionDate">Fecha <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="manualLineProductionDate" required>
+                            <div class="invalid-feedback">Seleccione la fecha</div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" for="manualLineProductionTime">Hora <span class="text-danger">*</span></label>
+                            <input type="time" class="form-control" id="manualLineProductionTime" required>
+                            <div class="invalid-feedback">Seleccione la hora</div>
+                        </div>
+                    </div>
+                    <div class="form-text mt-3">
+                        La produccion se agregara al programa activo o al ultimo programa registrado en la linea.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveManualLineProduction" form="manualLineProductionForm">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="operatorModal" tabindex="-1" aria-hidden="true">
@@ -418,13 +642,15 @@
                                 <tr>
                                     <th>Empleado</th>
                                     <th>Nombre completo</th>
+                                    <th>Area</th>
+                                    <th>Linea</th>
                                     <th>Operacion</th>
                                     <th class="text-center">Activo</th>
                                     <th class="text-center" style="width:100px">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="operatorListBody">
-                                <tr><td colspan="5" class="text-center text-muted py-3">Cargando...</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted py-3">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -458,6 +684,12 @@
                                 </select>
                             </div>
                             <div class="col-6">
+                                <label class="form-label fw-semibold">Linea</label>
+                                <select class="form-select" id="opLine">
+                                    <option value="">Seleccione una linea</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
                                 <label class="form-label fw-semibold">Operacion</label>
                                 <input type="text" class="form-control" id="opOperation" list="operationOptions" maxlength="100" autocomplete="off">
                                 <datalist id="operationOptions"></datalist>
@@ -482,6 +714,104 @@
                     <i class="fas fa-trash me-1"></i>Eliminar
                 </button>
                 <button type="submit" class="btn btn-primary" id="btnSaveOperator" form="operatorForm">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productionLineModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-operators text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-industry me-2"></i>
+                    Gestionar Lineas
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="productionLineListView" class="p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 fw-bold">Lineas registradas</h6>
+                        <button class="btn btn-primary btn-sm" id="btnNewProductionLine" type="button">
+                            <i class="fas fa-plus me-1"></i>Nueva Linea
+                        </button>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm" id="productionLineSearchInput" placeholder="Buscar por area, numero o nombre...">
+                    </div>
+                    <div class="table-responsive" style="max-height:360px; overflow-y:auto">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Area</th>
+                                    <th>Numero</th>
+                                    <th>Nombre</th>
+                                    <th class="text-end">Meta</th>
+                                    <th class="text-end">Personal</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center">En card</th>
+                                    <th class="text-center" style="width:70px">Accion</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productionLineListBody">
+                                <tr><td colspan="8" class="text-center text-muted py-3">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="productionLineFormView" class="p-3" style="display:none">
+                    <a href="#" id="btnBackToProductionLineList" class="text-decoration-none small mb-3 d-inline-block">
+                        <i class="fas fa-arrow-left me-1"></i>Volver al listado
+                    </a>
+                    <form id="productionLineForm" novalidate>
+                        <input type="hidden" id="productionLineId">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold" for="productionLineArea">Area <span class="text-danger">*</span></label>
+                                <select class="form-select" id="productionLineArea" required>
+                                    <option value="">Seleccione un area</option>
+                                </select>
+                                <div class="invalid-feedback">Seleccione un area</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="productionLineNumber">Numero <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="productionLineNumber" min="1" step="1" required>
+                                <div class="invalid-feedback">Ingrese un numero valido</div>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold" for="productionLineName">Nombre</label>
+                                <input type="text" class="form-control" id="productionLineName" maxlength="100">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="productionLineGoal">Meta diaria <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="productionLineGoal" min="1" step="1" required>
+                                <div class="invalid-feedback">Ingrese una meta valida</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="productionLinePeople">Personal <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="productionLinePeople" min="1" step="1" required>
+                                <div class="invalid-feedback">Ingrese una cantidad valida</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="productionLineStandardTime">Tiempo estandar</label>
+                                <input type="number" class="form-control" id="productionLineStandardTime" min="0" step="0.00000001">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="productionLineActive" checked>
+                                    <label class="form-check-label fw-semibold" for="productionLineActive">Linea activa y disponible para escaneo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="submit" class="btn btn-primary" id="btnSaveProductionLine" form="productionLineForm" style="display:none">
                     <i class="fas fa-save me-1"></i>Guardar
                 </button>
             </div>
@@ -539,7 +869,62 @@
     </div>
 </div>
 
+<div class="modal fade" id="scanProductionAreaModal" tabindex="-1" aria-labelledby="scanProductionAreaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="scanProductionAreaModalLabel">
+                    <i class="fas fa-barcode me-2"></i>
+                    Seleccionar area de escaneo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label fw-semibold" for="scanProductionAreaSelect">Area de produccion</label>
+                <select class="form-select" id="scanProductionAreaSelect">
+                    @foreach (var area in areas)
+                    {
+                        var areaId = Convert.ToInt32(area.AreaId);
+                        var selected = selectedScanAreaId.HasValue && selectedScanAreaId.Value == areaId;
+                        <option value="@areaId" selected="@selected">@area.CustomerName - @area.AreaName</option>
+                    }
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGoToScanProduction" @(areas.Any() ? "" : "disabled")>
+                    <i class="fas fa-arrow-right me-1"></i>
+                    Entrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script>
+        window.productionOperatorsDashboardConfig = {
+            areaId: @(ViewBag.AreaId != null ? ViewBag.AreaId : "null"),
+            areaName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.AreaName ?? "")),
+            customerName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CustomerName ?? ""))
+        };
+
+        let selectedScanRoute = "@Url.Action("Index", "ProductionOperators")";
+
+        document.querySelectorAll("[data-scan-route]").forEach(button => {
+            button.addEventListener("click", () => {
+                selectedScanRoute = button.dataset.scanRoute || selectedScanRoute;
+            });
+        });
+
+        document.getElementById("btnGoToScanProduction")?.addEventListener("click", () => {
+            const areaId = document.getElementById("scanProductionAreaSelect")?.value;
+            if (!areaId) return;
+
+            window.location.href = selectedScanRoute + "?areaId=" + encodeURIComponent(areaId);
+        });
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="~/js/ProductionOperatorsDashboard/list.js"></script>
+    <script src="https://unpkg.com/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script src="~/js/ProductionOperatorsDashboard/list.js" asp-append-version="true"></script>
 }
