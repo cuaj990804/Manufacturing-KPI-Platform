@@ -150,7 +150,7 @@ Full flow details are available in [DIAGRAMA_FLUJO_APIS.md](./FLOWCHART_APIS.md)
 ### Steps
 
 1. Clone the repository.
-2. Provision a development SQL Server database with the application's existing schema, views, stored procedures, and synthetic reference data. The scripts in `GDIKPI/Scripts` are incremental changes, not a complete database bootstrap. Review the upgrade notes in [CHANGELOG.md](./CHANGELOG.md).
+2. Create and populate a local demonstration database using the complete scripts in [database/README.md](./database/README.md). They include the schema, views, procedures, and synthetic data. The older scripts in `GDIKPI/Scripts` are incremental updates for existing databases and are not needed for a fresh demo installation.
 3. Configure the connection and external services using environment variables. The checked-in values target localhost and contain no database password. For example, in PowerShell:
 
 ```powershell
@@ -201,7 +201,7 @@ Generated dashboard preferences in `GDIKPI/App_Data` and local production config
 
 ## Current state
 
-This codebase demonstrates an internal manufacturing application and remains under active development. Running the complete workflows requires a compatible SQL Server schema and external services. The public repository is not a self-contained demo or a hardened public deployment.
+This codebase demonstrates an internal manufacturing application and remains under active development. A reproducible local database demo is included. Workflows that integrate with external services require those services separately; this is not a hardened public deployment.
 
 Engineering priorities include automated regression tests, consistent endpoint authorization, production TLS configuration, and extracting complex controller logic into services. The attendance HTTP client currently bypasses certificate validation and must be hardened before a production deployment.
 

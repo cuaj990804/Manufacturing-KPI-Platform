@@ -83,6 +83,8 @@ public partial class KpisContext : DbContext
 
     public virtual DbSet<DailyProductionDTO> DailyProduction { get; set; }
 
+    public virtual DbSet<DailyProductionIntervalDTO> DailyProductionIntervals { get; set; }
+
     public virtual DbSet<LineOEEDTO> LineOEE { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

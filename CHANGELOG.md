@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-15 — Reproducible demo database
+
+- Add the SQL Server schema, five views, five stored procedures, and independently generated synthetic data.
+- Remove original database qualifiers from stored procedures so the demo runs in its own database.
+- Add guarded installation scripts, database verification, and demo sign-in instructions.
+- Map the hourly production endpoint to its own result DTO, matching the ten columns returned by `GetDailyProduction` instead of the incompatible area-summary contract.
+- Validate database creation, sample data, views, procedures, and application requests on SQL Server 2019 Express.
+
 ## 2026-09-15 — Production dashboards and line scanning
 
 ### Features

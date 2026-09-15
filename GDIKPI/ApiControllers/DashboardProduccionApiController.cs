@@ -42,7 +42,7 @@ namespace GDIKPI.Controllers
                     return Ok(new List<object>());
                 }
 
-                var results = await _context.DailyProduction
+                var results = await _context.DailyProductionIntervals
                     .FromSqlRaw("EXEC [dbo].[GetDailyProduction] @ProductionLinesID = {0}, @TargetDate = {1}",
                         productionLinesId, dateParam)
                     .ToListAsync();
